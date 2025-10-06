@@ -5,11 +5,15 @@ from datetime import datetime
 
 def _verify_user_exists(username):
     try:
-        requests.get(
+        res = requests.get(
             f"https://api.chess.com/pub/player/{username}/games/archives")
-        return True
+        if res.status_code == 200:
+            return True
+        else:
+            print(f"    Username not found: {username} (HTTP {res.status_code})")
+            return False
     except Exception as exc:
-        print(f"    Username not found: {username} ({exc})")
+        print(f"    Error checking username: {username} ({exc})")
         return False
 
 
@@ -17,6 +21,7 @@ def _fetch_user_archives(username):
     sleep(0.03)
     res = requests.get(
         f"https://api.chess.com/pub/player/{username}/games/archives")
+    res.raise_for_status()
     return res.json()['archives']
 
 
@@ -24,6 +29,7 @@ def _fetch_archive_games(username, month, year):
     sleep(0.006)
     res = requests.get(
         f"https://api.chess.com/pub/player/{username}/games/{year}/{month}")
+    res.raise_for_status()
     return res.json()['games']
 
 
