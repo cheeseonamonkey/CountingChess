@@ -20,7 +20,7 @@ def _verify_user_exists(username, verbose=False):
 
 
 def _fetch_user_archives(username, verbose=False):
-    _sleep(20)
+    _sleep(35)
     url = f"https://api.chess.com/pub/player/{username}/games/archives"
     res = _client.get(url)
     if verbose:
@@ -62,9 +62,7 @@ def fetch_all_users_games(usernames, n=None, verbose=False):
                 break
         if verbose:
             games_for_this_user = len(all_games) - user_game_count
-            print(
-                f"\n{games_for_this_user} games fetched for {username} (total: {len(all_games)})\n"
-            )
+            print(f"\n{games_for_this_user} games fetched for {username}\n")
         if n and len(all_games) >= n:
             break
     if n:
@@ -86,7 +84,7 @@ def _fetch_country_players(country_code, verbose=False):
     return []
 
 
-def fetch_random_games(n, m=50, verbose=False):
+def fetch_random_games(n, m=80, verbose=False):
     """Fetch n random chess.pgn.Game objects from various countries (m games per user)."""
     countries = [
         'US', 'IN', 'RU', 'GB', 'DE', 'FR', 'CA', 'AU', 'BR', 'ES', 'IT', 'NL',

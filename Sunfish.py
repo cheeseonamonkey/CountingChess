@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Minimal chess position evaluator from FEN notation"""
 
+from functools import lru_cache
+
 # Piece values and piece-square tables
 piece = {"P": 100, "N": 280, "B": 320, "R": 479, "Q": 929, "K": 60000}
 pst = {
@@ -41,6 +43,7 @@ for k, t in pst.items():
     pst[k] = (0, ) * 20 + tuple(padded) + (0, ) * 20
 
 
+@lru_cache(maxsize=512)
 def fen_to_board(fen):
     """Convert FEN to 120-char board representation"""
     rows = [
@@ -51,6 +54,7 @@ def fen_to_board(fen):
         rows) + "\n         \n         \n"
 
 
+@lru_cache(maxsize=8224 * 4)
 def evaluate_fen(fen):
     """Evaluate position from FEN, returns score from white's perspective"""
     b = fen_to_board(fen)
@@ -58,6 +62,21 @@ def evaluate_fen(fen):
                for i, p in enumerate(b) if p.isalpha())
 
 
+# Pre-compute direction sets and center squares
+_DIRS = {
+    'N': (-21, -19, -12, -8, 8, 12, 19, 21),
+    'B': (-11, -9, 9, 11),
+    'R': (-10, -1, 1, 10),
+    'Q': (-11, -10, -9, -1, 1, 9, 10, 11),
+    'K': (-11, -10, -9, -1, 1, 9, 10, 11)
+}
+_CTR = frozenset({44, 45, 54, 55})
+_SLIDES = frozenset('BRQ')
+_W_UPPER = frozenset('PRNBQK')
+_B_LOWER = frozenset('prnbqk')
+
+
+@lru_cache(maxsize=8224 * 4)
 def calculate_metrics(fen):
     """Calculate positional metrics from FEN"""
     b = fen_to_board(fen)
@@ -69,98 +88,110 @@ def calculate_metrics(fen):
         for f in range(1, 9))
 
     # Development - minor pieces off starting squares
-    dev = sum(b[i] not in 'NB' for i in [92, 93, 96, 97]) - \
-          sum(b[i] not in 'nb' for i in [22, 23, 26, 27])
+    dev = sum(b[i] not in 'NB' for i in (92, 93, 96, 97)) - \
+          sum(b[i] not in 'nb' for i in (22, 23, 26, 27))
 
-    # Mobility
-    dirs = {
-        'N': (-21, -19, -12, -8, 8, 12, 19, 21),
-        'B': (-11, -9, 9, 11),
-        'R': (-10, -1, 1, 10),
-        'Q': (-11, -10, -9, -1, 1, 9, 10, 11),
-        'K': (-11, -10, -9, -1, 1, 9, 10, 11)
-    }
+    # Mobility - single pass calculation
     wm = bm = 0
+    wk = bk = None
+    mat_w = mat_b = 0
+    adv = 0
+
     for i, p in enumerate(b):
+        if p == ' ' or p == '\n': continue
+
+        pu = p.upper()
+
+        # Track kings
+        if p == 'K': wk = i
+        elif p == 'k': bk = i
+
+        # Material
+        if p.isupper():
+            mat_w += piece.get(pu, 0)
+            if i < 60 and p != '.': adv += 3
+        elif p.islower():
+            mat_b += piece.get(pu, 0)
+            if i > 60: adv += 3
+
+        # Mobility
         if p == 'P':
-            wm += (b[i + 10] == '.') + (b[i + 9] in 'prnbqk') + (b[i + 11]
-                                                                 in 'prnbqk')
+            wm += (b[i + 10] == '.') + (b[i + 9] in _B_LOWER) + (b[i + 11]
+                                                                 in _B_LOWER)
         elif p == 'p':
-            bm += (b[i - 10] == '.') + (b[i - 9] in 'PRNBQK') + (b[i - 11]
-                                                                 in 'PRNBQK')
-        elif p.upper() in dirs:
-            for d in dirs[p.upper()]:
+            bm += (b[i - 10] == '.') + (b[i - 9] in _W_UPPER) + (b[i - 11]
+                                                                 in _W_UPPER)
+        elif pu in _DIRS:
+            for d in _DIRS[pu]:
                 pos = i + d
-                if p.isupper() and b[pos] not in 'PRNBQK \n':
-                    wm += 1
-                    if p in 'BRQ':
-                        while b[pos := pos + d] == '.':
-                            wm += 1
-                elif p.islower() and b[pos] not in 'prnbqk \n':
-                    bm += 1
-                    if p.upper() in 'BRQ':
-                        while b[pos := pos + d] == '.':
-                            bm += 1
+                if p.isupper():
+                    if b[pos] not in _W_UPPER and b[pos] not in ' \n':
+                        wm += 1
+                        if pu in _SLIDES:
+                            pos += d
+                            while b[pos] == '.':
+                                wm += 1
+                                pos += d
+                else:
+                    if b[pos] not in _B_LOWER and b[pos] not in ' \n':
+                        bm += 1
+                        if pu in _SLIDES:
+                            pos += d
+                            while b[pos] == '.':
+                                bm += 1
+                                pos += d
 
-    # Sharpness - king exposure + material imbalance + advanced pieces
-    mat_w = sum(piece.get(p.upper(), 0) for p in b if p.isupper())
-    mat_b = sum(piece.get(p.upper(), 0) for p in b if p.islower())
-    sharp = (abs(b.index('K') - 95) + abs(b.index('k') - 25)) * 10 + \
-            abs(mat_w - mat_b) // 20 + \
-            sum((p.isupper() and i < 60 or p.islower() and i > 60) * 3
-                for i, p in enumerate(b) if p.isalpha())
+    # Sharpness
+    sharp = (abs(wk - 95) + abs(bk - 25)) * 10 + abs(mat_w - mat_b) // 20 + adv
 
-    # Center control
-    ctr = {44, 45, 54, 55}
+    # Center control - optimized single pass
     wc = bc = 0
-    for sq in ctr:
+    for sq in _CTR:
         if b[sq].isupper(): wc += 2
         elif b[sq].islower(): bc += 2
+
     for i, p in enumerate(b):
         if p == 'P':
-            wc += sum((i + d) in ctr for d in [9, 11])
+            wc += ((i + 9) in _CTR) + ((i + 11) in _CTR)
         elif p == 'p':
-            bc += sum((i + d) in ctr for d in [-9, -11])
-        elif p.upper() in dirs:
-            wc += sum(p.isupper() for d in dirs[p.upper()] if (i + d) in ctr)
-            bc += sum(p.islower() for d in dirs[p.upper()] if (i + d) in ctr)
+            bc += ((i - 9) in _CTR) + ((i - 11) in _CTR)
+        elif p.upper() in _DIRS:
+            for d in _DIRS[p.upper()]:
+                if (i + d) in _CTR:
+                    wc += p.isupper()
+                    bc += p.islower()
 
-    # King safety - pawn shield + piece proximity
-    wk, bk = b.index('K'), b.index('k')
-    ws = sum(b[wk + d] == 'P' for d in [-11, -10, -9, 9, 10, 11])
-    bs = sum(b[bk + d] == 'p' for d in [-11, -10, -9, 9, 10, 11])
+    # King safety
+    ws = sum(b[wk + d] == 'P' for d in (-11, -10, -9, 9, 10, 11))
+    bs = sum(b[bk + d] == 'p' for d in (-11, -10, -9, 9, 10, 11))
     ks = (ws - bs) * 10 + \
-         (sum(b[bk + d].isupper() for d in range(-22, 23)) -
-          sum(b[wk + d].islower() for d in range(-22, 23))) * 5
+         (sum(b[bk + d].isupper() for d in range(-22, 23) if 0 <= bk + d < len(b)) -
+          sum(b[wk + d].islower() for d in range(-22, 23) if 0 <= wk + d < len(b))) * 5
 
-    # Pawn structure - doubled, isolated
+    # Pawn structure
     wp_st = bp_st = 0
     for f in range(1, 9):
-        wp_col = [b[20 + f + 10 * r] == 'P' for r in range(8)]
-        bp_col = [b[20 + f + 10 * r] == 'p' for r in range(8)]
-        if sum(wp_col) > 1: wp_st -= 15
-        if sum(bp_col) > 1: bp_st -= 15
+        wp_col = sum(b[20 + f + 10 * r] == 'P' for r in range(8))
+        bp_col = sum(b[20 + f + 10 * r] == 'p' for r in range(8))
 
-        # Check for isolated pawns
-        if any(wp_col):
-            has_adj = any(b[19 + f + 10 * r] == 'P'
-                          for r in range(8)) if f > 1 else False
-            has_adj |= any(b[21 + f + 10 * r] == 'P'
-                           for r in range(8)) if f < 8 else False
+        if wp_col > 1: wp_st -= 15
+        if bp_col > 1: bp_st -= 15
+
+        if wp_col:
+            has_adj = (f > 1 and any(b[19 + f + 10 * r] == 'P' for r in range(8))) or \
+                      (f < 8 and any(b[21 + f + 10 * r] == 'P' for r in range(8)))
             if not has_adj: wp_st -= 10
-        if any(bp_col):
-            has_adj = any(b[19 + f + 10 * r] == 'p'
-                          for r in range(8)) if f > 1 else False
-            has_adj |= any(b[21 + f + 10 * r] == 'p'
-                           for r in range(8)) if f < 8 else False
+        if bp_col:
+            has_adj = (f > 1 and any(b[19 + f + 10 * r] == 'p' for r in range(8))) or \
+                      (f < 8 and any(b[21 + f + 10 * r] == 'p' for r in range(8)))
             if not has_adj: bp_st -= 10
 
-    # Space - squares controlled in opponent's half
+    # Space
     ws = sum(
-        any(b[i + d] == 'P' for d in [-9, -11]) for i in range(20, 60)
+        any(b[i + d] == 'P' for d in (-9, -11)) for i in range(20, 60)
         if b[i] == '.')
     bs = sum(
-        any(b[i + d] == 'p' for d in [9, 11]) for i in range(60, 100)
+        any(b[i + d] == 'p' for d in (9, 11)) for i in range(60, 100)
         if b[i] == '.')
 
     return {
