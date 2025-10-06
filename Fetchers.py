@@ -5,15 +5,11 @@ from datetime import datetime
 
 def _verify_user_exists(username):
     try:
-        res = requests.get(
+        requests.get(
             f"https://api.chess.com/pub/player/{username}/games/archives")
-        if res.status_code == 200:
-            return True
-        else:
-            print(f"    Username not found: {username} (status code: {res.status_code})")
-            return False
-    except Exception as e:
-        print(f"    Error checking username {username}: {e}")
+        return True
+    except Exception as exc:
+        print(f"    Username not found: {username} ({exc})")
         return False
 
 
@@ -21,30 +17,14 @@ def _fetch_user_archives(username):
     sleep(0.03)
     res = requests.get(
         f"https://api.chess.com/pub/player/{username}/games/archives")
-    if res.status_code == 200:
-        try:
-            return res.json()['archives']
-        except:
-            print(f"    Error parsing archives for {username}")
-            return []
-    else:
-        print(f"    Failed to fetch archives for {username} (status code: {res.status_code})")
-        return []
+    return res.json()['archives']
 
 
 def _fetch_archive_games(username, month, year):
     sleep(0.006)
     res = requests.get(
         f"https://api.chess.com/pub/player/{username}/games/{year}/{month}")
-    if res.status_code == 200:
-        try:
-            return res.json()['games']
-        except:
-            print(f"    Error parsing games for {username}/{year}/{month}")
-            return []
-    else:
-        print(f"    Failed to fetch games for {username}/{year}/{month} (status code: {res.status_code})")
-        return []
+    return res.json()['games']
 
 
 def fetch_all_users_games(usernames):
