@@ -43,4 +43,4 @@ for game_index, game in enumerate(randomGames):
     df = pd.DataFrame(vectors)
     games_vectors.append(df)
 
-print(games_vectors)
+print(games_vectors[9])
