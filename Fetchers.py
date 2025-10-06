@@ -3,33 +3,27 @@ from time import sleep
 from datetime import datetime
 
 
-def _verify_user_exists(username):
+def verify_user_exists(username):
     try:
-        res = requests.get(
+        requests.get(
             f"https://api.chess.com/pub/player/{username}/games/archives")
-        if res.status_code == 200:
-            return True
-        else:
-            print(f"    Username not found: {username} (HTTP {res.status_code})")
-            return False
-    except Exception as exc:
-        print(f"    Error checking username: {username} ({exc})")
+        return True
+    except:
+        print(f"    Username not found: {username}")
         return False
 
 
-def _fetch_user_archives(username):
+def fetch_user_archives(username):
     sleep(0.03)
     res = requests.get(
         f"https://api.chess.com/pub/player/{username}/games/archives")
-    res.raise_for_status()
     return res.json()['archives']
 
 
-def _fetch_archive_games(username, month, year):
+def fetch_archive_games(username, month, year):
     sleep(0.006)
     res = requests.get(
         f"https://api.chess.com/pub/player/{username}/games/{year}/{month}")
-    res.raise_for_status()
     return res.json()['games']
 
 
@@ -41,13 +35,13 @@ def fetch_all_users_games(usernames):
     now = datetime.now()
 
     for username in usernames:
-        if not _verify_user_exists(username):
+        if not verify_user_exists(username):
             continue
 
         print(f"  Fetching games for: {username}...")
         user_game_count = len(all_games)
 
-        archives = _fetch_user_archives(username)
+        archives = fetch_user_archives(username)
         for archive_url in archives:
             year, month = archive_url.split('/')[-2:]
 
@@ -56,7 +50,7 @@ def fetch_all_users_games(usernames):
             if archive_date > now:
                 continue
 
-            games = _fetch_archive_games(username, month, year)
+            games = fetch_archive_games(username, month, year)
             all_games.extend(games)
 
         games_for_this_user = len(all_games) - user_game_count
