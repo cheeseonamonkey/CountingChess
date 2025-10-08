@@ -339,6 +339,11 @@ other_table = [
         rand_stats['premove_noncap_ratio'],
         my_stats['premove_noncap_ratio'] - rand_stats['premove_noncap_ratio']
     ],
+    [
+        'CPL Premove vs Not', my_stats['premove_acpl'] - my_stats['non_premove_acpl'],
+        rand_stats['premove_acpl'] - rand_stats['non_premove_acpl'],
+        (my_stats['premove_acpl'] - my_stats['non_premove_acpl']) - (rand_stats['premove_acpl'] - rand_stats['non_premove_acpl'])
+    ],
 ]
 print("\n--- Other Metrics ---")
 print(
