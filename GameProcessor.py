@@ -1,8 +1,8 @@
 from datetime import datetime
 import chess
-import Sunfish
 import pandas as pd
 import numpy as np
+import Sunfish
 
 WINNER_MAP = {"1-0": "white", "0-1": "black", "1/2-1/2": "draw"}
 METRIC_KEYS = [
@@ -35,8 +35,7 @@ def process_game(game, perspective_user=None, verbose=False):
         game.headers.get("UTCDate", game.headers.get("Date", "")),
         game.headers.get("UTCTime", ""))
 
-    resigned_or_abandoned = ("resign" in termination
-                             or "abandon" in termination or result == "*")
+    resigned_or_abandoned = "resign" in termination or "abandon" in termination or result == "*"
 
     game_meta = {
         'winner': winner,
@@ -147,12 +146,12 @@ def process_game(game, perspective_user=None, verbose=False):
         np.mean([
             moves['centipawn_loss'][i] for i in range(num_moves)
             if moves['is_premove'][i]
-        ]) if num_moves else 0,
+        ]) if sum(moves['is_premove']) else 0,
         'non_premove_acpl':
         np.mean([
             moves['centipawn_loss'][i] for i in range(num_moves)
             if not moves['is_premove'][i]
-        ]) if num_moves else 0,
+        ]) if num_moves - sum(moves['is_premove']) else 0,
     })
 
     return {'game': game_meta, 'moves': moves}
