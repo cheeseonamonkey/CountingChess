@@ -40,7 +40,9 @@ def _fetch_archive_games(username, month, year, verbose=False):
 
 
 def fetch_all_users_games(usernames, n=None, verbose=False):
-    if not isinstance(usernames, list) or len(usernames) == 0: return []
+    if not isinstance(usernames, list) or len(usernames) == 0:
+        return []
+
     all_games = []
     for username in usernames:
         if not _verify_user_exists(username, verbose):
@@ -48,22 +50,33 @@ def fetch_all_users_games(usernames, n=None, verbose=False):
             continue
         if verbose: print(f"→ {username}")
         user_game_count = len(all_games)
+
         archives = _fetch_user_archives(username, verbose)
         for archive_url in archives:
             year, month = archive_url.split('/')[-2:]
             games = _fetch_archive_games(username, month, year, verbose)
             all_games.extend(games)
-            if n and len(all_games) >= n: break
+            if n and len(all_games) >= n: 
+                break
+
         if verbose:
-            print(
-                f"  ✓ {len(all_games) - user_game_count} total from {username}\n"
-            )
-        if n and len(all_games) >= n: break
-    if n: all_games = all_games[:n]
-    if verbose: print(f"→ parsing {len(all_games)} games to objects...")
+            print(f"  ✓ {len(all_games) - user_game_count} total from {username}\n")
+        if n and len(all_games) >= n:
+            break
+
+    if n: 
+        all_games = all_games[:n]
+
+    if verbose: 
+        print(f"→ parsing {len(all_games)} games to objects...")
+
+    # Filter out games without 'pgn' and parse safely
     parsed = _parse_games_to_objects(
-        [g["pgn"].replace("\n", "\t") for g in all_games])
-    if verbose: print(f"✓ parsed {len(parsed)} games successfully\n")
+        [g["pgn"].replace("\n", "\t") for g in all_games if "pgn" in g]
+    )
+
+    if verbose: 
+        print(f"✓ parsed {len(parsed)} games successfully\n")
     return parsed
 
 

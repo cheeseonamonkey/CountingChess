@@ -74,7 +74,7 @@ def process_game(game, perspective_user=None, verbose=False):
         k: []
         for k in [
             'move_num', 'eval', *METRIC_KEYS, 'time_spent', 'centipawn_loss',
-            'last_piece_type_moved', 'is_premove'
+            'last_piece_type_moved', 'is_premove', 'is_capture'
         ]
     }
     board, node = game.board(), game
@@ -85,6 +85,7 @@ def process_game(game, perspective_user=None, verbose=False):
         is_perspective = (perspective_color == "white") == board.turn
         move_san = board.san(move)
         piece = board.piece_at(move.from_square)
+        is_capture = board.is_capture(move)
 
         if is_perspective:
             if piece and piece.piece_type == chess.QUEEN and not queen_dev_turn:
@@ -124,6 +125,7 @@ def process_game(game, perspective_user=None, verbose=False):
         moves['last_piece_type_moved'].append(
             chess.piece_name(piece.piece_type) if piece else "")
         moves['is_premove'].append(is_premove)
+        moves['is_capture'].append(is_capture)
         for key in METRIC_KEYS:
             moves[key].append(metrics[key])
 
