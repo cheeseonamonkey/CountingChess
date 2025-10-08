@@ -55,11 +55,31 @@ def fen_to_board(fen):
 
 
 @lru_cache(maxsize=8224 * 4)
-def evaluate_fen(fen):
-    """Evaluate position from FEN, returns score from white's perspective"""
+def evaluate_fen(fen, result=None):
+    """
+    Evaluate position from FEN, returns score from white's perspective.
+    Optional:
+      - result: '1-0', '0-1', '1/2-1/2' to slightly bias evaluation
+    """
     b = fen_to_board(fen)
-    return sum(pst[p][i] if p.isupper() else -pst[p.upper()][119 - i]
-               for i, p in enumerate(b) if p.isalpha())
+
+    # Base evaluation from piece-square tables
+    eval_base = sum(pst[p][i] if p.isupper() else -pst[p.upper()][119 - i]
+                    for i, p in enumerate(b) if p.isalpha())
+
+    # Apply result bias only for decisive games
+    if result in ('1-0', '0-1'):
+        # Material ratio as a stage factor
+        mat_w = sum(piece.get(p.upper(), 0) for p in b if p.isupper())
+        mat_b = sum(piece.get(p.upper(), 0) for p in b if p.islower())
+        stage_factor = min((mat_w + mat_b) / 2000, 1)
+        bias = 0.075 * stage_factor
+        if result == '1-0':
+            eval_base *= 1 + bias
+        elif result == '0-1':
+            eval_base *= 1 - bias
+
+    return eval_base
 
 
 # Pre-compute direction sets and center squares

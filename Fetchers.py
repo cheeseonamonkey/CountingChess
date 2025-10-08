@@ -9,8 +9,12 @@ _client = httpx.Client(headers={"User-Agent": "Mozilla/5.0"})
 _cache_dir = Path(".cache/chess_api")
 _cache_dir.mkdir(parents=True, exist_ok=True)
 
+
 def _verify_user_exists(username, verbose=False):
-    return _client.get(f"https://api.chess.com/pub/player/{username}/games/archives").status_code == 200
+    return _client.get(
+        f"https://api.chess.com/pub/player/{username}/games/archives"
+    ).status_code == 200
+
 
 def _fetch_user_archives(username, verbose=False):
     cache_file = _cache_dir / f"{username}_archives.json"
@@ -18,16 +22,22 @@ def _fetch_user_archives(username, verbose=False):
         if verbose: print(f"  ✓ cached archives: {username}")
         return json.loads(cache_file.read_text())
     if verbose: print(f"  → fetching archives: {username}")
-    archives = _client.get(f"https://api.chess.com/pub/player/{username}/games/archives").json()["archives"]
+    archives = _client.get(
+        f"https://api.chess.com/pub/player/{username}/games/archives").json(
+        )["archives"]
     cache_file.write_text(json.dumps(archives))
     if verbose: print(f"  ✓ saved {len(archives)} archives to cache")
     return archives
 
+
 def _fetch_archive_games(username, month, year, verbose=False):
     if verbose: print(f"    → downloading {year}/{month}")
-    games = _client.get(f"https://api.chess.com/pub/player/{username}/games/{year}/{month}").json()["games"]
+    games = _client.get(
+        f"https://api.chess.com/pub/player/{username}/games/{year}/{month}"
+    ).json()["games"]
     if verbose: print(f"    ✓ got {len(games)} games")
     return games
+
 
 def fetch_all_users_games(usernames, n=None, verbose=False):
     if not isinstance(usernames, list) or len(usernames) == 0: return []
@@ -44,28 +54,47 @@ def fetch_all_users_games(usernames, n=None, verbose=False):
             games = _fetch_archive_games(username, month, year, verbose)
             all_games.extend(games)
             if n and len(all_games) >= n: break
-        if verbose: print(f"  ✓ {len(all_games) - user_game_count} total from {username}\n")
+        if verbose:
+            print(
+                f"  ✓ {len(all_games) - user_game_count} total from {username}\n"
+            )
         if n and len(all_games) >= n: break
     if n: all_games = all_games[:n]
     if verbose: print(f"→ parsing {len(all_games)} games to objects...")
-    parsed = _parse_games_to_objects([g["pgn"].replace("\n", "\t") for g in all_games])
+    parsed = _parse_games_to_objects(
+        [g["pgn"].replace("\n", "\t") for g in all_games])
     if verbose: print(f"✓ parsed {len(parsed)} games successfully\n")
     return parsed
 
+
 def _fetch_country_players(country_code, verbose=False):
     if verbose: print(f"  → fetching players from {country_code}")
-    res = _client.get(f"https://api.chess.com/pub/country/{country_code}/players")
+    res = _client.get(
+        f"https://api.chess.com/pub/country/{country_code}/players")
     players = res.json()["players"] if res.status_code == 200 else []
     if verbose: print(f"  ✓ found {len(players)} players")
     return players
 
+
 def fetch_random_games(n, m=50, o=3, verbose=False):
     """Fetch n random games, max m per user, from o users per country."""
-    countries = ['US','IN','RU','GB','DE','FR','CA','AU','BR','ES','IT','NL','MX','AR','PL','TR','UA','SE','NO','DK','FI','BE','AT','CH','PT','GR','CZ','RO','HU','IL','ZA','EG','NG','KE','JP','KR','CN','TH','VN','ID','PH','MY','SG','NZ','CL','CO','PE','VE','IE','PK','BD','SA','AE','TW','HK','MA','DZ','TN','GH','ET','UY','EC','CR','PA','DO','BG','HR','SK','SI','LT','LV','EE','RS','BA','MK','AL','IS','LU','CY','MT','QA','KW','OM','BH','JO','LB','IQ','LY','SD','TZ','UG','AO','SN','CI','CM','MZ','BY','KZ','UZ','GE','AM','AZ','MD','NP','LK','MM','KH','LA','BN','MN','AF','YE','SY','PS','ZW']
+    countries = [
+        'US', 'IN', 'RU', 'GB', 'DE', 'FR', 'CA', 'AU', 'BR', 'ES', 'IT', 'NL',
+        'MX', 'AR', 'PL', 'TR', 'UA', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH',
+        'PT', 'GR', 'CZ', 'RO', 'HU', 'IL', 'ZA', 'EG', 'NG', 'KE', 'JP', 'KR',
+        'CN', 'TH', 'VN', 'ID', 'PH', 'MY', 'SG', 'NZ', 'CL', 'CO', 'PE', 'VE',
+        'IE', 'PK', 'BD', 'SA', 'AE', 'TW', 'HK', 'MA', 'DZ', 'TN', 'GH', 'ET',
+        'UY', 'EC', 'CR', 'PA', 'DO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE',
+        'RS', 'BA', 'MK', 'AL', 'IS', 'LU', 'CY', 'MT', 'QA', 'KW', 'OM', 'BH',
+        'JO', 'LB', 'IQ', 'LY', 'SD', 'TZ', 'UG', 'AO', 'SN', 'CI', 'CM', 'MZ',
+        'BY', 'KZ', 'UZ', 'GE', 'AM', 'AZ', 'MD', 'NP', 'LK', 'MM', 'KH', 'LA',
+        'BN', 'MN', 'AF', 'YE', 'SY', 'PS', 'ZW'
+    ]
 
-    
     all_games, attempts = [], 0
-    if verbose: print(f"→ fetching {n} random games (max {m}/user, {o} users/country)\n")
+    if verbose:
+        print(
+            f"→ fetching {n} random games (max {m}/user, {o} users/country)\n")
     while len(all_games) < n:
         country = random.choice(countries)
         if verbose: print(f"→ sampling country: {country}")
@@ -82,8 +111,13 @@ def fetch_random_games(n, m=50, o=3, verbose=False):
     print(f'✓ fetched {len(all_games[:n])} games from {attempts} countries\n')
     return all_games[:n]
 
+
 def _parse_games_to_objects(pgn_list):
-    return [game for pgn in pgn_list if (game := chess.pgn.read_game(io.StringIO(pgn.replace("\t", "\n"))))]
+    return [
+        game for pgn in pgn_list
+        if (game := chess.pgn.read_game(io.StringIO(pgn.replace("\t", "\n"))))
+    ]
+
 
 def _get_user_country(username, verbose=False):
     res = _client.get(f"https://api.chess.com/pub/player/{username}")
