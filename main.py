@@ -183,7 +183,7 @@ def display_full_comparison(mine, rand):
             f"{diff(mine['win_rate'], rand['win_rate']):+.1%}"
         ],
         [
-            'Resigned/Abandoned', f"{mine['resigned_rate']:.1%}",
+            'Resign/Abandon', f"{mine['resigned_rate']:.1%}",
             f"{rand['resigned_rate']:.1%}",
             f"{diff(mine['resigned_rate'], rand['resigned_rate']):+.1%}"
         ],
@@ -213,8 +213,8 @@ def display_full_comparison(mine, rand):
         set(mine['piece_avg'].keys()) | set(rand['piece_avg'].keys()))
     piece_table = [[
         p,
-        f"{mine['piece_avg'].get(p, 0):.2f} ({mine['piece_counts'].get(p, 0)})",
-        f"{rand['piece_avg'].get(p, 0):.2f} ({rand['piece_counts'].get(p, 0)})",
+        f"{mine['piece_avg'].get(p, 0):.2f} ({mine['piece_counts'].get(p, 0) / 1000:.1}k)",
+        f"{rand['piece_avg'].get(p, 0):.2f} ({rand['piece_counts'].get(p, 0)/1000:.1}k)",
         f"{diff(mine['piece_avg'].get(p, 0), rand['piece_avg'].get(p, 0)):+.2f}"
     ] for p in pieces]
     print(
@@ -303,7 +303,7 @@ my_df = GameProcessor.process_games_list(
 
 print("Processing random games...")
 rand_df = GameProcessor.process_games_list(
-    Fetchers.fetch_random_games(999, m=64, o=9, verbose=False))
+    Fetchers.fetch_random_games(13999, m=64, o=16, verbose=False))
 
 print("Calculating stats...")
 my_stats = calc_stats(my_df)
@@ -351,4 +351,4 @@ print(
              headers=['Metric', 'You', 'Random', 'Diff'],
              tablefmt='simple'))
 
-print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+print("\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nn\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")

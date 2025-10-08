@@ -67,7 +67,7 @@ def fetch_all_users_games(usernames, n=None, verbose=False):
             if n and len(all_games) >= n: 
                 break
 
-        if verbose:
+        if(verbose):
             print(f"  ✓ {len(all_games) - user_game_count} total from {username}\n")
         if n and len(all_games) >= n:
             break
@@ -98,7 +98,8 @@ def _fetch_country_players(country_code, verbose=False):
 
 
 def fetch_random_games(n, m=50, o=3, verbose=False):
-    """Fetch n random games, max m per user, from o users per country."""
+    """Fetch n random games, max m per user, from o users per country sampling.
+    Higher m is faster, but has less user variety sampled. """ 
     cache_key = f"random_games_{n}_{m}_{o}"
     if cached := _cache_get(cache_key):
         print(f'✓ loaded {len(cached)} cached games\n')
@@ -118,7 +119,7 @@ def fetch_random_games(n, m=50, o=3, verbose=False):
     ]
 
     all_games, attempts = [], 0
-    if verbose: print(f"→ fetching {n} random games (max {m}/user, {o} users/country)\n")
+    if verbose: print(f"→ fetching {n} random games (max {m}/user, {o} users per country sample)\n")
     while len(all_games) < n:
         country = random.choice(countries)
         if verbose: print(f"→ sampling country: {country}")
@@ -131,7 +132,8 @@ def fetch_random_games(n, m=50, o=3, verbose=False):
         games = fetch_all_users_games(selected, m, verbose)
         all_games.extend(games)
         attempts += 1
-        if verbose: print(f"✓ total games collected: {len(all_games)}/{n}\n")
+        if random.random() < 0.05:
+            print(f"✓ total games collected: {len(all_games)}/{n}\n")
     
     result = all_games[:n]
     _cache_set(cache_key, [g.accept(chess.pgn.StringExporter()) for g in result])
