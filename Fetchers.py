@@ -99,6 +99,11 @@ def _fetch_country_players(country_code, verbose=False):
 
 def fetch_random_games(n, m=50, o=3, verbose=False):
     """Fetch n random games, max m per user, from o users per country."""
+    cache_key = f"random_games_{n}_{m}_{o}"
+    if cached := _cache_get(cache_key):
+        print(f'✓ loaded {len(cached)} cached games\n')
+        return _parse_games_to_objects(cached)
+    
     countries = [
         'US', 'IN', 'RU', 'GB', 'DE', 'FR', 'CA', 'AU', 'BR', 'ES', 'IT', 'NL',
         'MX', 'AR', 'PL', 'TR', 'UA', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH',
@@ -113,9 +118,7 @@ def fetch_random_games(n, m=50, o=3, verbose=False):
     ]
 
     all_games, attempts = [], 0
-    if verbose:
-        print(
-            f"→ fetching {n} random games (max {m}/user, {o} users/country)\n")
+    if verbose: print(f"→ fetching {n} random games (max {m}/user, {o} users/country)\n")
     while len(all_games) < n:
         country = random.choice(countries)
         if verbose: print(f"→ sampling country: {country}")
@@ -129,8 +132,11 @@ def fetch_random_games(n, m=50, o=3, verbose=False):
         all_games.extend(games)
         attempts += 1
         if verbose: print(f"✓ total games collected: {len(all_games)}/{n}\n")
-    print(f'✓ fetched {len(all_games[:n])} games from {attempts} countries\n')
-    return all_games[:n]
+    
+    result = all_games[:n]
+    _cache_set(cache_key, [g.accept(chess.pgn.StringExporter()) for g in result])
+    print(f'✓ fetched & cached {len(result)} games from {attempts} countries\n')
+    return result
 
 
 def _parse_games_to_objects(pgn_list):
