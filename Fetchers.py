@@ -3,11 +3,19 @@ import httpx
 import chess.pgn
 import io
 import json
+import gzip
 from pathlib import Path
 
 _client = httpx.Client(headers={"User-Agent": "Mozilla/5.0"})
 _cache_dir = Path(".cache/chess_api")
 _cache_dir.mkdir(parents=True, exist_ok=True)
+
+def _cache_get(key):
+    f = _cache_dir / f"{key}.gz"
+    return json.loads(gzip.decompress(f.read_bytes())) if f.exists() else None
+
+def _cache_set(key, data):
+    (_cache_dir / f"{key}.gz").write_bytes(gzip.compress(json.dumps(data).encode()))
 
 
 def _verify_user_exists(username, verbose=False):
