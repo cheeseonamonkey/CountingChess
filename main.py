@@ -315,34 +315,46 @@ my_stats, rand_stats = display_full_comparison(my_stats, rand_stats)
 # --- Optional: Other stats in table format ---
 other_table = [
     [
-        'Time vs CPL Corr', my_stats['time_cpl_corr'],
-        rand_stats['time_cpl_corr'],
-        my_stats['time_cpl_corr'] - rand_stats['time_cpl_corr']
+        'Time vs CPL Corr', 
+        f"{my_stats['time_cpl_corr']:.3f}",
+        f"{rand_stats['time_cpl_corr']:.3f}",
+        f"{my_stats['time_cpl_corr'] - rand_stats['time_cpl_corr']:+.3f}"
     ],
     [
-        'Sharpness vs CPL Corr', my_stats['sharp_cpl_corr'],
-        rand_stats['sharp_cpl_corr'],
-        my_stats['sharp_cpl_corr'] - rand_stats['sharp_cpl_corr']
+        'Sharpness vs CPL Corr', 
+        f"{my_stats['sharp_cpl_corr']:.3f}",
+        f"{rand_stats['sharp_cpl_corr']:.3f}",
+        f"{my_stats['sharp_cpl_corr'] - rand_stats['sharp_cpl_corr']:+.3f}"
     ],
     [
-        'Premove Ratio', my_stats['premove_ratio'],
-        rand_stats['premove_ratio'],
-        my_stats['premove_ratio'] - rand_stats['premove_ratio']
+        'Premove Ratio', 
+        f"{my_stats['premove_ratio']:.2%}",
+        f"{rand_stats['premove_ratio']:.2%}",
+        f"{my_stats['premove_ratio'] - rand_stats['premove_ratio']:+.2%}"
     ],
     [
-        'Premove Cap Ratio', my_stats['premove_cap_ratio'],
-        rand_stats['premove_cap_ratio'],
-        my_stats['premove_cap_ratio'] - rand_stats['premove_cap_ratio']
+        'Premove Cap Ratio', 
+        f"{my_stats['premove_cap_ratio']:.2%}",
+        f"{rand_stats['premove_cap_ratio']:.2%}",
+        f"{my_stats['premove_cap_ratio'] - rand_stats['premove_cap_ratio']:+.2%}"
     ],
     [
-        'Premove NonCap Ratio', my_stats['premove_noncap_ratio'],
-        rand_stats['premove_noncap_ratio'],
-        my_stats['premove_noncap_ratio'] - rand_stats['premove_noncap_ratio']
+        'Premove NonCap Ratio', 
+        f"{my_stats['premove_noncap_ratio']:.2%}",
+        f"{rand_stats['premove_noncap_ratio']:.2%}",
+        f"{my_stats['premove_noncap_ratio'] - rand_stats['premove_noncap_ratio']:+.2%}"
     ],
     [
-        'CPL Premove vs Not', my_stats['premove_acpl'] - my_stats['non_premove_acpl'],
-        rand_stats['premove_acpl'] - rand_stats['non_premove_acpl'],
-        (my_stats['premove_acpl'] - my_stats['non_premove_acpl']) - (rand_stats['premove_acpl'] - rand_stats['non_premove_acpl'])
+        'Premove ACPL', 
+        f"{my_stats['premove_acpl']:.1f}",
+        f"{rand_stats['premove_acpl']:.1f}",
+        f"{my_stats['premove_acpl'] - rand_stats['premove_acpl']:+.1f}"
+    ],
+    [
+        'Non-Premove ACPL', 
+        f"{my_stats['non_premove_acpl']:.1f}",
+        f"{rand_stats['non_premove_acpl']:.1f}",
+        f"{my_stats['non_premove_acpl'] - rand_stats['non_premove_acpl']:+.1f}"
     ],
 ]
 print("\n--- Other Metrics ---")
