@@ -299,11 +299,11 @@ def display_full_comparison(mine, rand):
 # --- Main ---
 print("Processing your games...")
 my_df = GameProcessor.process_games_list(
-    Fetchers.fetch_all_users_games(["ffffattyyyy"], None, verbose=True))
+    Fetchers.fetch_all_users_games(["ffatty190", "ffatty120", "ffffattyyyy"], None, verbose=False))
 
 print("Processing random games...")
 rand_df = GameProcessor.process_games_list(
-    Fetchers.fetch_random_games(10999, m=64, o=9, verbose=True))
+    Fetchers.fetch_random_games(999, m=64, o=9, verbose=False))
 
 print("Calculating stats...")
 my_stats = calc_stats(my_df)
@@ -345,3 +345,5 @@ print(
     tabulate(other_table,
              headers=['Metric', 'You', 'Random', 'Diff'],
              tablefmt='simple'))
+
+print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
