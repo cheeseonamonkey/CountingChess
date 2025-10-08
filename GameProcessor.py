@@ -13,8 +13,12 @@ METRIC_KEYS = [
 
 def parse_datetime(utc_date, utc_time=""):
     if not utc_date or utc_date == "????.??.??":
+        return None
+    try:
         return datetime.fromisoformat(
             f"{utc_date.replace('.', '-')} {utc_time}".strip())
+    except:
+        return None
 
 
 def process_game(game, perspective_user=None, verbose=False):
@@ -99,10 +103,10 @@ def process_game(game, perspective_user=None, verbose=False):
         time_spent = int(prev_clock - clock) if clock and prev_clock else 0
         prev_clock = clock
 
-        is_premove = time_spent < 0.15
+        is_premove = time_spent < 0.1  # Identify premoves
 
         score, metrics = Sunfish.evaluate_fen(
-            board.fen(), result=result), Sunfish.calculate_metrics(board.fen())
+            board.fen(), result=None), Sunfish.calculate_metrics(board.fen())
         if perspective_color == "black":
             score, metrics = -score, {k: -v for k, v in metrics.items()}
 
@@ -110,8 +114,8 @@ def process_game(game, perspective_user=None, verbose=False):
         prev_eval = score
 
         if verbose:
-            print(f"Move {move_num:2d}: {move_san:6s} | Eval: {score:+5.1f} | "
-                  f"Time: {time_spent:2d}s | Loss: {cp_loss:+3f}cp | "
+            print(f"Move {move_num:2d}: {move_san:6s} | Eval: {score:+5d} | "
+                  f"Time: {time_spent:2d}s | Loss: {cp_loss:3d}cp | "
                   f"Premove: {is_premove}")
 
         moves['move_num'].append(move_num)
