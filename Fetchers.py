@@ -1,3 +1,4 @@
+
 import random
 import httpx
 import chess.pgn
@@ -17,12 +18,8 @@ def _cache_get(key):
 def _cache_set(key, data):
     (_cache_dir / f"{key}.gz").write_bytes(gzip.compress(json.dumps(data).encode()))
 
-
 def _verify_user_exists(username, verbose=False):
-    return _client.get(
-        f"https://api.chess.com/pub/player/{username}/games/archives"
-    ).status_code == 200
-
+    return _client.get(f"https://api.chess.com/pub/player/{username}/games/archives").status_code == 200
 
 def _fetch_user_archives(username, verbose=False):
     cache_file = _cache_dir / f"{username}_archives.json"
@@ -30,22 +27,16 @@ def _fetch_user_archives(username, verbose=False):
         if verbose: print(f"  ✓ cached archives: {username}")
         return json.loads(cache_file.read_text())
     if verbose: print(f"  → fetching archives: {username}")
-    archives = _client.get(
-        f"https://api.chess.com/pub/player/{username}/games/archives").json(
-        )["archives"]
+    archives = _client.get(f"https://api.chess.com/pub/player/{username}/games/archives").json()["archives"]
     cache_file.write_text(json.dumps(archives))
     if verbose: print(f"  ✓ saved {len(archives)} archives to cache")
     return archives
 
-
 def _fetch_archive_games(username, month, year, verbose=False):
     if verbose: print(f"    → downloading {year}/{month}")
-    games = _client.get(
-        f"https://api.chess.com/pub/player/{username}/games/{year}/{month}"
-    ).json()["games"]
+    games = _client.get(f"https://api.chess.com/pub/player/{username}/games/{year}/{month}").json()["games"]
     if verbose: print(f"    ✓ got {len(games)} games")
     return games
-
 
 def fetch_all_users_games(usernames, n=None, verbose=False):
     if not isinstance(usernames, list) or len(usernames) == 0:
@@ -67,7 +58,7 @@ def fetch_all_users_games(usernames, n=None, verbose=False):
             if n and len(all_games) >= n: 
                 break
 
-        if(verbose):
+        if verbose:
             print(f"  ✓ {len(all_games) - user_game_count} total from {username}\n")
         if n and len(all_games) >= n:
             break
@@ -78,33 +69,27 @@ def fetch_all_users_games(usernames, n=None, verbose=False):
     if verbose: 
         print(f"→ parsing {len(all_games)} games to objects...")
 
-    # Filter out games without 'pgn' and parse safely
-    parsed = _parse_games_to_objects(
-        [g["pgn"].replace("\n", "\t") for g in all_games if "pgn" in g]
-    )
+    parsed = _parse_games_to_objects([g["pgn"].replace("\n", "\t") for g in all_games if "pgn" in g])
 
     if verbose: 
         print(f"✓ parsed {len(parsed)} games successfully\n")
     return parsed
 
-
 def _fetch_country_players(country_code, verbose=False):
     if verbose: print(f"  → fetching players from {country_code}")
-    res = _client.get(
-        f"https://api.chess.com/pub/country/{country_code}/players")
+    res = _client.get(f"https://api.chess.com/pub/country/{country_code}/players")
     players = res.json()["players"] if res.status_code == 200 else []
     if verbose: print(f"  ✓ found {len(players)} players")
     return players
 
-
 def fetch_random_games(n, m=50, o=3, verbose=False):
     """Fetch n random games, max m per user, from o users per country sampling.
-    Higher m is faster, but has less user variety sampled. """ 
+    Higher m is faster, but has less user variety sampled. Filters out games where any player has <400 ELO.""" 
     cache_key = f"random_games_{n}_{m}_{o}"
     if cached := _cache_get(cache_key):
         print(f'✓ loaded {len(cached)} cached games\n')
         return _parse_games_to_objects(cached)
-    
+
     countries = [
         'US', 'IN', 'RU', 'GB', 'DE', 'FR', 'CA', 'AU', 'BR', 'ES', 'IT', 'NL',
         'MX', 'AR', 'PL', 'TR', 'UA', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH',
@@ -132,21 +117,27 @@ def fetch_random_games(n, m=50, o=3, verbose=False):
         games = fetch_all_users_games(selected, m, verbose)
         all_games.extend(games)
         attempts += 1
-        if random.random() < 0.05:
+        if random.random() < 0.04:
             print(f"✓ total games collected: {len(all_games)}/{n}\n")
-    
-    result = all_games[:n]
+
+    # Filter out games where any player has ELO < 400
+    filtered_games = []
+    for game in all_games[:n]:
+        white_elo = game.headers.get("WhiteElo")
+        black_elo = game.headers.get("BlackElo")
+        try:
+            if white_elo and black_elo and int(white_elo) >= 250 and int(black_elo) >= 250:
+                filtered_games.append(game)
+        except (ValueError, TypeError):
+            continue
+
+    result = filtered_games[:n]
     _cache_set(cache_key, [g.accept(chess.pgn.StringExporter()) for g in result])
     print(f'✓ fetched & cached {len(result)} games from {attempts} countries\n')
     return result
 
-
 def _parse_games_to_objects(pgn_list):
-    return [
-        game for pgn in pgn_list
-        if (game := chess.pgn.read_game(io.StringIO(pgn.replace("\t", "\n"))))
-    ]
-
+    return [game for pgn in pgn_list if (game := chess.pgn.read_game(io.StringIO(pgn.replace("\t", "\n"))))]
 
 def _get_user_country(username, verbose=False):
     res = _client.get(f"https://api.chess.com/pub/player/{username}")
