@@ -223,10 +223,11 @@ def print_stats(lbls, dsets, pgn_sets=None, res_sets=None):
                 print(
                     f"  {g:>2} A:{gs[i][0].get(g,0):>5.1f} W:{gs[i][1].get(g,0):>5.1f}%"
                 )
-    for i, l in enumerate(lbls):
-        print(f"\n{l} Time of Day:")
+    if lbls:
+        print(f"\n{lbls[0]} Time of Day:")
         for h in range(24):
-            a = ts[i][0].get(h, 0)
-            w = ts[i][1].get(h, 0)
+            a = ts[0][0].get(h, 0)
+            w = ts[0][1].get(h, 0)
             print(f"  {h:02d}h A:{a:>5.1f} W:{w:>5.1f}%")
-    print(f"{'='*w}")
+
+    
