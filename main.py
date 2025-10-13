@@ -9,8 +9,8 @@ def main():
     Stockfish.load_cache()
 
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)
-    random_games = Fetchers.fetch_random_games(1500, 30, 30)
+    user_games = Fetchers.fetch_all_users_games([user], None)[:55] 
+    random_games = Fetchers.fetch_random_games(20, 10, 33)
 
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
@@ -25,14 +25,16 @@ def main():
                          key=lambda x: (x[1][4] or 0) if x[1] else 0)
     n = len(sorted_pairs)
 
-    bott_games, bott_results = zip(*sorted_pairs[:int(n * 0.2)]) if n else ([], [])
-    avg_games, avg_results = zip(*sorted_pairs[int(n * 0.15):int(n * 0.85)]) if n else ([], [])
-    top_games, top_results = zip(*sorted_pairs[-int(n * 0.15):]) if n else ([], [])
+    # Fixed splitting logic: LOW: 0-15%, MID: 17-87%, TOP: 90-100%
+    # This creates small gaps to emphasize differences
+    bott_games, bott_results = zip(*sorted_pairs[:int(n * 0.15)]) if n else ([], [])
+    mid_games, mid_results = zip(*sorted_pairs[int(n * 0.17):int(n * 0.87)]) if n else ([], [])
+    top_games, top_results = zip(*sorted_pairs[int(n * 0.90):]) if n else ([], [])
 
-    print_stats(["My", "Avg", "Top", "Bott"],
-                [user_results, list(avg_results), list(top_results), list(bott_results)],
-                [user_games, list(avg_games), list(top_games), list(bott_games)],
-                [user_results, list(avg_results), list(top_results), list(bott_results)])
+    print_stats(["Me", "Bott", "Mid", "Top"],
+                [user_results, list(bott_results), list(mid_results), list(top_results)],
+                [user_games, list(bott_games), list(mid_games), list(top_games)],
+                [user_results, list(bott_results), list(mid_results), list(top_results)])
 
     Stockfish.save_cache()
 

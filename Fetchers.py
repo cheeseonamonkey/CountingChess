@@ -92,42 +92,55 @@ def _fetch_country_players(country_code, verbose=False):
 
 
 def fetch_random_games(n, m=50, o=3, verbose=False):
-  cache_key = f"random_games_{n}_{m}_{o}"
-  if cached := _cache(cache_key):
-    if verbose: print(f"✓ loaded {len(cached)} cached games")
-    return _parse_games(cached)
-  countries = [
-      'US', 'IN', 'RU', 'GB', 'DE', 'FR', 'CA', 'AU', 'BR', 'ES', 'IT', 'NL',
-      'MX', 'AR', 'PL', 'TR', 'UA', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH',
-      'PT', 'GR', 'CZ', 'RO', 'HU', 'IL', 'ZA', 'EG', 'NG', 'KE', 'JP', 'KR',
-      'CN', 'TH', 'VN', 'ID', 'PH', 'MY', 'SG', 'NZ', 'CL', 'CO', 'PE', 'VE',
-      'IE', 'PK', 'BD', 'SA', 'AE', 'TW', 'HK', 'MA', 'DZ', 'TN', 'GH', 'ET',
-      'UY', 'EC', 'CR', 'PA', 'DO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE',
-      'RS', 'BA', 'MK', 'AL', 'IS', 'LU', 'CY', 'MT', 'QA', 'KW', 'OM', 'BH',
-      'JO', 'LB', 'IQ', 'LY', 'SD', 'TZ', 'UG', 'AO', 'SN', 'CI', 'CM', 'MZ',
-      'BY', 'KZ', 'UZ', 'GE', 'AM', 'AZ', 'MD', 'NP', 'LK', 'MM', 'KH', 'LA',
-      'BN', 'MN', 'AF', 'YE', 'SY', 'PS', 'ZW'
-  ]
-  all_games, attempts = [], 0
-  while len(all_games) < n:
-    country = random.choice(countries)
-    if verbose: print(f"→ sampling {country}")
-    players = _fetch_country_players(country, verbose)
-    if len(players) < o:
-      if verbose: print(f"✗ only {len(players)} players, skipping")
-      continue
-    selected = random.sample(players, o)
-    games = fetch_all_users_games(selected, m, verbose)
-    all_games.extend(games)
-    attempts += 1
-    if verbose and random.random() < 0.04:
-      print(f"✓ total games: {len(all_games)}/{n}")
-  filtered = [g for g in all_games[:n] if _valid_elo(g)]
-  _cache(cache_key, [g.accept(chess.pgn.StringExporter()) for g in filtered])
-  if verbose:
-    print(
-        f"✓ fetched & cached {len(filtered)} games from {attempts} countries")
-  return filtered
+    cache_key = f"random_games_{n}_{m}_{o}"
+    cached = _cache(cache_key)
+    if cached:
+        if verbose: print(f"✓ loaded {len(cached)} cached games")
+        cached_games = _parse_games(cached)
+        # Only use cached if it has enough games
+        if len(cached_games) >= n:
+            return cached_games
+
+    countries = [
+        'US', 'IN', 'RU', 'GB', 'DE', 'FR', 'CA', 'AU', 'BR', 'ES', 'IT', 'NL',
+        'MX', 'AR', 'PL', 'TR', 'UA', 'SE', 'NO', 'DK', 'FI', 'BE', 'AT', 'CH',
+        'PT', 'GR', 'CZ', 'RO', 'HU', 'IL', 'ZA', 'EG', 'NG', 'KE', 'JP', 'KR',
+        'CN', 'TH', 'VN', 'ID', 'PH', 'MY', 'SG', 'NZ', 'CL', 'CO', 'PE', 'VE',
+        'IE', 'PK', 'BD', 'SA', 'AE', 'TW', 'HK', 'MA', 'DZ', 'TN', 'GH', 'ET',
+        'UY', 'EC', 'CR', 'PA', 'DO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE',
+        'RS', 'BA', 'MK', 'AL', 'IS', 'LU', 'CY', 'MT', 'QA', 'KW', 'OM', 'BH',
+        'JO', 'LB', 'IQ', 'LY', 'SD', 'TZ', 'UG', 'AO', 'SN', 'CI', 'CM', 'MZ',
+        'BY', 'KZ', 'UZ', 'GE', 'AM', 'AZ', 'MD', 'NP', 'LK', 'MM', 'KH', 'LA',
+        'BN', 'MN', 'AF', 'YE', 'SY', 'PS', 'ZW'
+    ]
+
+    all_games, attempts = [], 0
+    while len(all_games) < n:
+        country = random.choice(countries)
+        if verbose: print(f"→ sampling {country}")
+        players = _fetch_country_players(country, verbose)
+        if len(players) < o:
+            if verbose: print(f"✗ only {len(players)} players, skipping")
+            continue
+        selected = random.sample(players, o)
+        games = fetch_all_users_games(selected, m, verbose)
+        all_games.extend(games)
+        attempts += 1
+        if verbose and random.random() < 0.04:
+            print(f"✓ total games: {len(all_games)}/{n}")
+
+    filtered = [g for g in all_games[:n] if _valid_elo(g)]
+
+    # Only overwrite cache if new set is bigger
+    if not cached or len(filtered) > len(_parse_games(cached)):
+        _cache(cache_key, [g.accept(chess.pgn.StringExporter()) for g in filtered])
+        if verbose:
+            print(f"✓ cached {len(filtered)} games (heap overwrite)")
+
+    if verbose:
+        print(f"✓ fetched & cached {len(filtered)} games from {attempts} countries")
+    return filtered
+
 
 
 def _valid_elo(game):

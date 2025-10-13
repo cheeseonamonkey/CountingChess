@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "unzipNLS", "tree", "pyflyby", "psmisc"]
+packages = ["glibcLocales", "psmisc", "pyflyby", "tree", "unzipNLS"]
 
 [unitTest]
 language = "python3"
@@ -36,7 +36,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "python main.py | tee output.txt"
 
 [workflows.workflow.metadata]
 outputType = "console"
