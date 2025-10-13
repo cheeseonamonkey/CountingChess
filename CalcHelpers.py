@@ -229,5 +229,3 @@ def print_stats(lbls, dsets, pgn_sets=None, res_sets=None):
             a = ts[0][0].get(h, 0)
             w = ts[0][1].get(h, 0)
             print(f"  {h:02d}h A:{a:>5.1f} W:{w:>5.1f}%")
-
-    

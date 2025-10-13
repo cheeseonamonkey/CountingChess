@@ -8,15 +8,15 @@ import heapq
 
 class DiskMemCache:
     """
-    Persistent cache for Stockfish analysis results, with smarter pruning
+    Persistent cache for Stockfish analysis results, with smart pruning
     based on combined frequency + recency (LFU + LRU).
     """
 
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
-                 prune_threshold=10.0,
-                 check_interval=1999,
-                 max_cache_size=100_000):
+                 prune_threshold=7.5,
+                 check_interval=6999,
+                 max_cache_size=300_000):
         """
         :param cache_file: Path to gzip-pickle file
         :param prune_threshold: Hit rate below which pruning is triggered
