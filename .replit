@@ -3,7 +3,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "psmisc", "pyflyby", "tree", "unzipNLS"]
+packages = ["glibcLocales", "psmisc", "pyflyby", "tree", "unzipNLS", "systemdUkify"]
 
 [unitTest]
 language = "python3"
@@ -40,3 +40,12 @@ args = "python main.py | tee output.txt"
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow]]
+name = "Nohup start "
+mode = "sequential"
+author = 2911550
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nohup sh -c 'python main.py 2>&1 | tee output.txt' &"

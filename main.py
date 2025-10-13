@@ -6,11 +6,13 @@ from CalcHelpers import print_stats
 def main():
     sf_path, depth, user = "./stockfish/stockfish-ubuntu-x86-64-avx2", 10, "ffffattyyyy"
     CalcHelpers.user = user
+
+    print("\nLoading cache...")
     Stockfish.load_cache()
 
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)[:55] 
-    random_games = Fetchers.fetch_random_games(20, 10, 33)
+    user_games = Fetchers.fetch_all_users_games([user], None)
+    random_games = Fetchers.fetch_random_games(2800, 35, 20)
 
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
@@ -25,8 +27,7 @@ def main():
                          key=lambda x: (x[1][4] or 0) if x[1] else 0)
     n = len(sorted_pairs)
 
-    # Fixed splitting logic: LOW: 0-15%, MID: 17-87%, TOP: 90-100%
-    # This creates small gaps to emphasize differences
+
     bott_games, bott_results = zip(*sorted_pairs[:int(n * 0.15)]) if n else ([], [])
     mid_games, mid_results = zip(*sorted_pairs[int(n * 0.17):int(n * 0.87)]) if n else ([], [])
     top_games, top_results = zip(*sorted_pairs[int(n * 0.90):]) if n else ([], [])
