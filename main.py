@@ -1,94 +1,139 @@
-import pandas as pd
-import numpy as np
-import warnings
-import Fetchers
-import GameProcessor as gp
+import chess, chess.pgn, chess.engine
+from io import StringIO
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
 
-warnings.filterwarnings("ignore")
+from DiskMemCache import DiskMemCache
+import Fetchers, CalcHelpers
+from CalcHelpers import print_stats
+from ProgressLogging import progress
 
-
-def summarize(df):
-    if df.empty:
-        return {}
-    gb = df.groupby('game_id')
-    first = gb.first()
-    num_games = df['game_id'].nunique()
-    meta = {
-        'num_games': num_games,
-        'win_rate': first['game_outcome'].eq('win').mean(),
-        'avg_elo': first['perspective_elo'].mean(),
-        'avg_opponent_elo': first['opponent_elo'].mean(),
-        'avg_acpl': gb['centipawn_loss'].mean().mean(),
-        'median_acpl': gb['centipawn_loss'].mean().median(),
-    }
-    ahead = df[df['eval'] > 50]
-    behind = df[df['eval'] < -50]
-    meta['conv_ahead'] = ahead.groupby('game_id').first()['game_outcome'].eq(
-        'win').mean() if not ahead.empty else 0
-    meta['comeback'] = behind.groupby('game_id').first()['game_outcome'].eq(
-        'win').mean() if not behind.empty else 0
-    return meta
+_pcache = DiskMemCache()
 
 
-def compare(my_df, rand_df):
-    print("\nComparing statistics...")
-    a = summarize(my_df)
-    b = summarize(rand_df)
-    all_keys = set(a) | set(b)
-    groups = [
-        ('Game Stats',
-         ['num_games', 'win_rate', 'avg_elo', 'avg_opponent_elo']),
-        ('ACPL Metrics', ['avg_acpl', 'median_acpl']),
-        ('Conversion Metrics', ['conv_ahead', 'comeback']),
-    ]
-    for group_name, keys in groups:
-        subset = {}
-        for k in keys:
-            if k in all_keys:
-                a_val = a.get(k, np.nan)
-                b_val = b.get(k, np.nan)
-                diff = a_val - b_val if (isinstance(a_val, (int, float))
-                                         and isinstance(b_val,
-                                                        (int, float))) else ''
-                subset[k] = (a_val if a_val == a_val else '',
-                             b_val if b_val == b_val else '', diff)
-        if not subset:
+def evaluate_single_game(pgn, stockfish_path, depth_limit, users=None, track_time=False, game_num=None):
+    try:
+        game = chess.pgn.read_game(StringIO(pgn)) if isinstance(pgn, str) else pgn
+        if not game: return None
+
+        white, black = game.headers.get("White", "").lower(), game.headers.get("Black", "").lower()
+        user_list = [u.lower() for u in (users or [])]
+        color = chess.WHITE if white in user_list else chess.BLACK if black in user_list else None
+
+        result = game.headers.get("Result", "*")
+        won = None
+        if result in ["1-0", "0-1"]:
+            won = (result == "1-0") == (color == chess.WHITE) if color else (result == "1-0")
+
+        hour = None
+        if track_time and (d := game.headers.get("UTCDate")) and (t := game.headers.get("UTCTime")):
+            try:
+                hour = datetime.strptime(f"{d} {t}", "%Y.%m.%d %H:%M:%S").replace(
+                    tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Denver")).hour
+            except:
+                pass
+
+        board, evals, piece_types, pawn_counts, best_moves = game.board(), [], [], [], []
+        castle_turn, castle_side = None, None
+
+        with chess.engine.SimpleEngine.popen_uci(stockfish_path) as engine:
+            for move_index, move in enumerate(game.mainline_moves(), 1):
+                fen = board.fen()
+                info = _pcache.get(fen, depth_limit.depth)
+                if not info:
+                    info = engine.analyse(board, depth_limit)
+                    _pcache.put(fen, depth_limit.depth, info)
+
+                evals.append(max(-800, min(800, info["score"].white().score(mate_score=1e4) or 0)))
+                piece_types.append(board.piece_type_at(move.from_square))
+                pawn_counts.append(sum(len(board.pieces(chess.PAWN, s)) for s in [chess.WHITE, chess.BLACK]))
+
+                if not castle_turn and board.is_castling(move) and board.turn == (color or board.turn):
+                    castle_turn, castle_side = move_index, "K" if move.to_square > move.from_square else "Q"
+
+                if (not color or move_index % 2 != color) and (pv := info.get("pv", [None])[0]):
+                    best_moves.append(move == pv)
+
+                board.push(move)
+
+        # Check if game ended by resignation (decisive result without checkmate)
+        is_resignation = result in ["1-0", "0-1"] and not board.is_checkmate()
+
+        return (evals, piece_types, pawn_counts, color,
+                int(game.headers.get("WhiteElo", 0) or game.headers.get("BlackElo", 0)),
+                castle_turn, castle_side, won, is_resignation, best_moves, hour, game_num)
+    except:
+        return None
+
+
+def assign_game_numbers(pgns):
+    grouped = defaultdict(list)
+    for idx, pgn in enumerate(pgns):
+        try:
+            g = chess.pgn.read_game(StringIO(pgn)) if isinstance(pgn,
+                                                                 str) else pgn
+            if not g or not (d := g.headers.get("UTCDate")) or not (
+                    t := g.headers.get("UTCTime")):
+                continue
+            local = datetime.strptime(f"{d} {t}", "%Y.%m.%d %H:%M:%S").replace(
+                tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Denver"))
+            grouped[local.date()].append((local, idx))
+        except:
             continue
-        df = pd.DataFrame(subset, index=['You', 'Random', 'Diff']).T
-        print(f"\n=== {group_name} ===")
-        print(df.to_string(float_format='%.3f'))
+    return {
+        i: n
+        for day, games in grouped.items()
+        for n, (_, i) in enumerate(sorted(games), 1)
+    }
 
+
+def analyze_games(pgns, stockfish_path, depth, users=None, track_time=False):
+    total, game_nums = len(pgns), assign_game_numbers(pgns) if users else {}
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(evaluate_single_game, pgn, stockfish_path,
+                            chess.engine.Limit(depth=depth), users, track_time,
+                            game_nums.get(i)):
+            i
+            for i, pgn in enumerate(pgns)
+        }
+        results = [None] * total
+        for completed, future in enumerate(as_completed(futures), 1):
+            results[futures[future]] = future.result()
+            progress(completed, total)
+    return results
+
+
+def main():
+    sf_path, depth, user = "./stockfish/stockfish-ubuntu-x86-64-avx2", 2, "ffffattyyyy"
+    CalcHelpers.user = user
+    _pcache.load()
+
+    print("Fetching games...")
+    user_games, random_games = Fetchers.fetch_all_users_games([user], None)[:20], Fetchers.fetch_random_games(30, 25, 19)
+    print(f"  {len(user_games)} user, {len(random_games)} random\n")
+
+    print("Analyzing user games...")
+    user_results = analyze_games(user_games, sf_path, depth, [user], True)
+    print("Analyzing random games...")
+    random_results = analyze_games(random_games, sf_path, depth)
+    print("Computing stats...\n")
+
+    # Sort and split random games by ELO
+    sorted_pairs = sorted(zip(random_games, random_results), key=lambda x: (x[1][4] or 0) if x[1] else 0)
+    n = len(sorted_pairs)
+
+    bott_games, bott_results = zip(*sorted_pairs[:int(n*0.2)]) if n else ([], [])
+    avg_games, avg_results = zip(*sorted_pairs[int(n*0.1):int(n*0.9)]) if n else ([], [])
+    top_games, top_results = zip(*sorted_pairs[-int(n*0.15):]) if n else ([], [])
+
+    print_stats(["My", "Avg", "Top", "Bott"],
+                [user_results, list(avg_results), list(top_results), list(bott_results)],
+                [user_games, list(avg_games), list(top_games), list(bott_games)],
+                [user_results, list(avg_results), list(top_results), list(bott_results)])
+    _pcache.save()
 
 if __name__ == "__main__":
-    print("Starting analysis...")
-    print("-" * 45)
-    users = ["ffffattyyyy", "fffattyyy"]
-
-    print(f"\n[1/4] Fetching games for users: {', '.join(users)}")
-    my_games = Fetchers.fetch_all_users_games(users, None)
-    print(
-        f"      ✓ Fetched {len(my_games) if hasattr(my_games, '__len__') else '?'} games"
-    )
-
-    print(f"\n[2/4] Processing user games...")
-    mine = gp.process_games_list(my_games, parallel=True, show_progress=True)
-    print(
-        f"      ✓ Processed {mine['game_id'].nunique() if not mine.empty else 0} unique games"
-    )
-
-    print(f"\n[3/4] Fetching random games (n=1, m=35, o=18)...")
-    rand_games = Fetchers.fetch_random_games(1, m=35, o=18)
-    print(
-        f"      ✓ Fetched {len(rand_games) if hasattr(rand_games, '__len__') else '?'} games"
-    )
-
-    print(f"\n[4/4] Processing random games...")
-    rand = gp.process_games_list(rand_games, parallel=True, show_progress=True)
-    print(
-        f"      ✓ Processed {rand['game_id'].nunique() if not rand.empty else 0} unique games"
-    )
-
-    print("\n" + "=" * 45)
-    compare(mine, rand)
-    print("\n" + "-" * 45)
-    print("Analysis complete!")
+    main()
