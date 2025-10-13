@@ -56,7 +56,7 @@ class DiskMemCache:
     def get_many(self, positions):
         """
         Batch lookup for multiple positions.
-        
+
         :param positions: List of (fen, depth) tuples
         :return: Tuple of (hits_dict, miss_list) where:
                  - hits_dict maps (fen, depth) -> cached_value
@@ -64,11 +64,11 @@ class DiskMemCache:
         """
         hits = {}
         misses = []
-        
+
         for fen, depth in positions:
             k = self._key(fen, depth)
             value = self.cache.get(k)
-            
+
             if value is not None:
                 hits[(fen, depth)] = value
                 self.hits += 1
@@ -76,13 +76,13 @@ class DiskMemCache:
             else:
                 misses.append((fen, depth, k))
                 self.misses += 1
-            
+
             self.lookup_count += 1
-        
+
         # Sort misses by frequency (descending) - check most frequent positions first
         misses_sorted = sorted(misses, key=lambda x: self.freq[x[2]], reverse=True)
         miss_list = [(fen, depth) for fen, depth, _ in misses_sorted]
-        
+
         self._maybe_prune()
         return hits, miss_list
 
@@ -94,7 +94,7 @@ class DiskMemCache:
     def put_many(self, results):
         """
         Batch insert for multiple positions.
-        
+
         :param results: List of (fen, depth, value) tuples
         """
         for fen, depth, value in results:
@@ -111,7 +111,7 @@ class DiskMemCache:
         print(f"Loading cache from {self.cache_file} ({size_mb:.1f} MB)...")
         with gzip.open(self.cache_file, "rb") as f:
             data = pickle.load(f)
-        
+
         # Handle both old format (cache only) and new format (cache + freq)
         if isinstance(data, dict) and 'cache' in data:
             self.cache = data['cache']
@@ -119,12 +119,12 @@ class DiskMemCache:
         else:
             self.cache = data
             self.freq = defaultdict(int)
-        
+
         # Initialize frequency for items without it
         for k in self.cache.keys():
             if k not in self.freq:
                 self.freq[k] = 1
-                
+
         print(f"  Loaded {len(self.cache):,} positions\n")
 
     def save(self):
@@ -152,16 +152,16 @@ class DiskMemCache:
 
         kept = len(trimmed_cache)
         total = len(self.cache)
-        
+
         if kept < total:
             print(f"\nPruning cache: keeping top {kept:,} of {total:,} positions...")
-        
+
         # Save both cache and frequency data
         data = {
             'cache': trimmed_cache,
             'freq': trimmed_freq
         }
-        
+
         with gzip.open(self.cache_file, "wb") as f:
             pickle.dump(data, f)
 
