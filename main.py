@@ -6,29 +6,32 @@ from CalcHelpers import print_stats
 def main():
     sf_path, depth, user = "./stockfish/stockfish-ubuntu-x86-64-avx2", 10, "ffffattyyyy"
     CalcHelpers.user = user
-
     print("\nLoading cache...")
     Stockfish.load_cache()
-
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)[:14]
-    random_games = Fetchers.fetch_random_games(22, 35, 20)
-
+    user_games = Fetchers.fetch_all_users_games([user], None)[:15]
+    random_games = Fetchers.fetch_random_games(40, 45, 28)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
-    print("Analyzing user games...")
-    user_results = Stockfish.analyze_games(user_games, sf_path, depth, [user],
-                                           True)
-    print("Analyzing random games...")
-    random_results = Stockfish.analyze_games(random_games, sf_path, depth)
+    # Analyze every game exactly once by concatenating lists, then split results.
+    all_games = list(user_games) + list(random_games)
+    print("Analyzing all games (single pass)...")
+    all_results = Stockfish.analyze_games(all_games, sf_path, depth, [user],
+                                          True)
+
+    # split results back
+    ulen = len(user_games)
+    user_results = all_results[:ulen]
+    random_results = all_results[ulen:]
+
     print("Computing stats...\n")
 
-    # Filter user results (if needed, though likely all valid)
+    # Filter valid user results
     valid_user = [(g, r) for g, r in zip(user_games, user_results)
                   if r is not None]
     user_games, user_results = zip(*valid_user) if valid_user else ([], [])
 
-    # Filter random results
+    # Filter valid random results
     valid_random = [(g, r) for g, r in zip(random_games, random_results)
                     if r is not None]
     random_games, random_results = zip(*valid_random) if valid_random else ([],
@@ -38,11 +41,10 @@ def main():
         f"  {len(user_results)} valid user, {len(random_results)} valid random\n"
     )
 
-    # Sort and split random games by ELO
+    # Sort and split random games by ELO (reuse same logic)
     sorted_pairs = sorted(zip(random_games, random_results),
                           key=lambda x: (x[1][4] or 0) if x[1] else 0)
     n = len(sorted_pairs)
-
     bott_games, bott_results = zip(*sorted_pairs[:int(n *
                                                       0.15)]) if n else ([],
                                                                          [])
@@ -65,7 +67,6 @@ def main():
             list(mid_results),
             list(top_results)
         ])
-
     Stockfish.save_cache()
 
 

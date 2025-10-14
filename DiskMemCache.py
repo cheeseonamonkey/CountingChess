@@ -14,9 +14,9 @@ class DiskMemCache:
 
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
-                 prune_threshold=6,
+                 prune_threshold=5.5,
                  check_interval=499,
-                 max_cache_size=275_000,
+                 max_cache_size=250_000,
                  periodic_save=True):
         """
         :param cache_file: Path to gzip-pickle file
