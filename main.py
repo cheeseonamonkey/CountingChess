@@ -11,31 +11,60 @@ def main():
     Stockfish.load_cache()
 
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)[:99]
-    random_games = Fetchers.fetch_random_games(200, 35, 20)
+    user_games = Fetchers.fetch_all_users_games([user], None)[:14]
+    random_games = Fetchers.fetch_random_games(22, 35, 20)
 
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
     print("Analyzing user games...")
-    user_results = Stockfish.analyze_games(user_games, sf_path, depth, [user], True)
+    user_results = Stockfish.analyze_games(user_games, sf_path, depth, [user],
+                                           True)
     print("Analyzing random games...")
     random_results = Stockfish.analyze_games(random_games, sf_path, depth)
     print("Computing stats...\n")
 
+    # Filter user results (if needed, though likely all valid)
+    valid_user = [(g, r) for g, r in zip(user_games, user_results)
+                  if r is not None]
+    user_games, user_results = zip(*valid_user) if valid_user else ([], [])
+
+    # Filter random results
+    valid_random = [(g, r) for g, r in zip(random_games, random_results)
+                    if r is not None]
+    random_games, random_results = zip(*valid_random) if valid_random else ([],
+                                                                            [])
+
+    print(
+        f"  {len(user_results)} valid user, {len(random_results)} valid random\n"
+    )
+
     # Sort and split random games by ELO
     sorted_pairs = sorted(zip(random_games, random_results),
-                         key=lambda x: (x[1][4] or 0) if x[1] else 0)
+                          key=lambda x: (x[1][4] or 0) if x[1] else 0)
     n = len(sorted_pairs)
 
+    bott_games, bott_results = zip(*sorted_pairs[:int(n *
+                                                      0.15)]) if n else ([],
+                                                                         [])
+    mid_games, mid_results = zip(
+        *sorted_pairs[int(n * 0.17):int(n * 0.87)]) if n else ([], [])
+    top_games, top_results = zip(*sorted_pairs[int(n * 0.90):]) if n else ([],
+                                                                           [])
 
-    bott_games, bott_results = zip(*sorted_pairs[:int(n * 0.15)]) if n else ([], [])
-    mid_games, mid_results = zip(*sorted_pairs[int(n * 0.17):int(n * 0.87)]) if n else ([], [])
-    top_games, top_results = zip(*sorted_pairs[int(n * 0.90):]) if n else ([], [])
-
-    print_stats(["Me", "Bott", "Mid", "Top"],
-                [user_results, list(bott_results), list(mid_results), list(top_results)],
-                [user_games, list(bott_games), list(mid_games), list(top_games)],
-                [user_results, list(bott_results), list(mid_results), list(top_results)])
+    print_stats(["Me", "Bott", "Mid", "Top"], [
+        user_results,
+        list(bott_results),
+        list(mid_results),
+        list(top_results)
+    ], [user_games,
+        list(bott_games),
+        list(mid_games),
+        list(top_games)], [
+            user_results,
+            list(bott_results),
+            list(mid_results),
+            list(top_results)
+        ])
 
     Stockfish.save_cache()
 

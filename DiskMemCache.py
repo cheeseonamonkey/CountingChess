@@ -1,6 +1,3 @@
-
-
-
 from collections import defaultdict
 from pathlib import Path
 import gzip
@@ -17,8 +14,8 @@ class DiskMemCache:
 
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
-                 prune_threshold=5.5,
-                 check_interval=299,
+                 prune_threshold=6,
+                 check_interval=499,
                  max_cache_size=275_000,
                  periodic_save=True):
         """
@@ -80,7 +77,9 @@ class DiskMemCache:
             self.lookup_count += 1
 
         # Sort misses by frequency (descending) - check most frequent positions first
-        misses_sorted = sorted(misses, key=lambda x: self.freq[x[2]], reverse=True)
+        misses_sorted = sorted(misses,
+                               key=lambda x: self.freq[x[2]],
+                               reverse=True)
         miss_list = [(fen, depth) for fen, depth, _ in misses_sorted]
 
         self._maybe_prune()
@@ -115,7 +114,7 @@ class DiskMemCache:
         # Handle both old format (cache only) and new format (cache + freq)
         if isinstance(data, dict) and 'cache' in data:
             self.cache = data['cache']
-            self.freq = data.get('freq', defaultdict(int))
+            self.freq = defaultdict(int, data.get('freq', {}))
         else:
             self.cache = data
             self.freq = defaultdict(int)
@@ -154,13 +153,12 @@ class DiskMemCache:
         total = len(self.cache)
 
         if kept < total:
-            print(f"\nPruning cache: keeping top {kept:,} of {total:,} positions...")
+            print(
+                f"\nPruning cache: keeping top {kept:,} of {total:,} positions..."
+            )
 
         # Save both cache and frequency data
-        data = {
-            'cache': trimmed_cache,
-            'freq': trimmed_freq
-        }
+        data = {'cache': trimmed_cache, 'freq': trimmed_freq}
 
         with gzip.open(self.cache_file, "wb") as f:
             pickle.dump(data, f)
@@ -198,10 +196,3 @@ class DiskMemCache:
 
     def _reset_stats(self):
         self.hits = self.misses = self.lookup_count = 0
-
-
-
-
-
-
-
