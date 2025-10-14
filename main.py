@@ -13,8 +13,8 @@ def main():
     Stockfish.load_cache()
 
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)
-    random_games = Fetchers.fetch_random_games(2200, 15, 40)
+    user_games = Fetchers.fetch_all_users_games([user], None)[:9]
+    random_games = Fetchers.fetch_random_games(20, 55, 28)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
     # Analyze every game once
@@ -22,18 +22,6 @@ def main():
     print("Analyzing all games (single pass)...")
     all_results = Stockfish.analyze_games(all_games, sf_path, depth, [user],
                                           True)
-
-    # Count unique positions (FENs)
-    unique_fens = set()
-    for game in all_games:
-        board = chess.Board()
-        for move in game[
-                "moves"]:  # assuming game["moves"] is a list of SAN/UCI moves
-            board.push_uci(move)  # or push_san if SAN
-            unique_fens.add(board.fen())
-    print(
-        f"  {len(all_games)}/{len(all_games)} games ({len(unique_fens)} unique FENs)"
-    )
 
     # Split results
     ulen = len(user_games)

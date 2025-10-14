@@ -9,29 +9,19 @@ import heapq
 
 class DiskMemCache:
     """
-    Persistent cache for Stockfish analysis results, with smart pruning
-    based on frequency (LFU). Values are immutable and never expire.
+    Persistent cache for Stockfish analysis results, with LFU-based pruning.
     """
 
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
                  prune_threshold=5.5,
-                 check_interval=999,
+                 check_interval=1999,
                  max_cache_size=250_000,
                  periodic_save=True):
-        """
-        :param cache_file: Path to gzip-pickle file
-        :param prune_threshold: Hit rate below which pruning is triggered
-        :param check_interval: Number of lookups before checking for pruning
-        :param max_cache_size: Maximum number of positions to keep on save
-        :param periodic_save: Save at check_interval even if hit rate is good
-        """
         self.cache_file = Path(cache_file)
         self.cache = {}
         self.freq = defaultdict(int)
-        self.hits = 0
-        self.misses = 0
-        self.lookup_count = 0
+        self.hits = self.misses = self.lookup_count = 0
         self.check_interval = check_interval
         self.prune_threshold = prune_threshold
         self.max_cache_size = max_cache_size
@@ -41,47 +31,39 @@ class DiskMemCache:
 
     def get(self, fen, depth):
         k = self._key(fen, depth)
-        value = self.cache.get(k)
-        if value is not None:
+        v = self.cache.get(k)
+        if v is not None:
             self.hits += 1
             self.freq[k] += 1
         else:
             self.misses += 1
         self.lookup_count += 1
         self._maybe_prune()
-        return value
+        return v
 
     def get_many(self, positions):
-        """
-        Batch lookup for multiple positions.
-
-        :param positions: List of (fen, depth) tuples
-        :return: Tuple of (hits_dict, miss_list) where:
-                 - hits_dict maps (fen, depth) -> cached_value
-                 - miss_list contains (fen, depth) tuples sorted by frequency
-        """
         hits = {}
         misses = []
 
+        append_miss = misses.append
+        cache_get = self.cache.get
+        freq_get = self.freq.get
+
         for fen, depth in positions:
             k = self._key(fen, depth)
-            value = self.cache.get(k)
-
-            if value is not None:
-                hits[(fen, depth)] = value
+            v = cache_get(k)
+            if v is not None:
+                hits[(fen, depth)] = v
                 self.hits += 1
                 self.freq[k] += 1
             else:
-                misses.append((fen, depth, k))
+                append_miss((fen, depth, k))
                 self.misses += 1
-
             self.lookup_count += 1
 
-        # Sort misses by frequency (descending) - check most frequent positions first
-        misses_sorted = sorted(misses,
-                               key=lambda x: self.freq[x[2]],
-                               reverse=True)
-        miss_list = [(fen, depth) for fen, depth, _ in misses_sorted]
+        # Use heapq.nlargest instead of full sort
+        miss_list = [(fen, depth) for fen, depth, k in heapq.nlargest(
+            len(misses), misses, key=lambda x: freq_get(x[2], 0))]
 
         self._maybe_prune()
         return hits, miss_list
@@ -92,15 +74,12 @@ class DiskMemCache:
         self.freq[k] += 1
 
     def put_many(self, results):
-        """
-        Batch insert for multiple positions.
-
-        :param results: List of (fen, depth, value) tuples
-        """
+        cache_set = self.cache.__setitem__
+        freq = self.freq
         for fen, depth, value in results:
             k = self._key(fen, depth)
-            self.cache[k] = value
-            self.freq[k] += 1
+            cache_set(k, value)
+            freq[k] += 1
 
     # ---------------- Persistence ----------------
 
@@ -108,15 +87,9 @@ class DiskMemCache:
         if not self.cache_file.exists():
             return
         try:
-            size_mb = self.cache_file.stat().st_size / 1024 / 1024
-            print(
-                f"Loading cache from {self.cache_file} ({size_mb:.1f} MB)...")
             with gzip.open(self.cache_file, "rb") as f:
                 data = pickle.load(f)
-        except (EOFError, pickle.UnpicklingError) as e:
-            print(
-                f"Warning: Cache file corrupted or incomplete ({e}). Starting fresh."
-            )
+        except (EOFError, pickle.UnpicklingError):
             self.cache = {}
             self.freq = defaultdict(int)
             return
@@ -129,24 +102,23 @@ class DiskMemCache:
             self.freq = defaultdict(int)
 
         for k in self.cache.keys():
-            if k not in self.freq:
-                self.freq[k] = 1
-
-        print(f"  Loaded {len(self.cache):,} positions\n")
+            self.freq.setdefault(k, 1)
 
     def save(self):
         if not self.cache:
-            print("Nothing to save.")
             return
 
         if len(self.cache) > self.max_cache_size:
             heap = []
+            heap_append = heapq.heappush
+            heap_pop = heapq.heappushpop
+            freq_get = self.freq.get
             for k in self.cache.keys():
-                freq = self.freq.get(k, 1)
+                f = freq_get(k, 1)
                 if len(heap) < self.max_cache_size:
-                    heapq.heappush(heap, (freq, k))
+                    heap_append(heap, (f, k))
                 else:
-                    heapq.heappushpop(heap, (freq, k))
+                    heap_pop(heap, (f, k))
             top_keys = {k for _, k in heap}
             trimmed_cache = {k: self.cache[k] for k in top_keys}
             trimmed_freq = {k: self.freq[k] for k in top_keys}
@@ -155,23 +127,13 @@ class DiskMemCache:
             trimmed_freq = dict(self.freq)
 
         data = {'cache': trimmed_cache, 'freq': trimmed_freq}
-
-        # ---- Safe atomic save ----
         tmp_path = self.cache_file.with_suffix(".tmp")
         try:
             with gzip.open(tmp_path, "wb") as f:
                 pickle.dump(data, f)
-            os.replace(tmp_path, self.cache_file)  # atomic on most OSes
+            os.replace(tmp_path, self.cache_file)
         finally:
-            if tmp_path.exists():
-                tmp_path.unlink(missing_ok=True)
-
-        size_mb = self.cache_file.stat().st_size / 1024 / 1024
-        hit_rate = self._hit_rate()
-        print(f"  Saved {len(trimmed_cache):,} positions ({size_mb:.1f} MB)")
-        print(
-            f"  Cache stats: {self.hits:,} hits, {self.misses:,} misses, {self.lookup_count} lookups"
-            f"({hit_rate:.1f}% hit rate)")
+            tmp_path.unlink(missing_ok=True)
 
         self.cache = trimmed_cache
         self.freq = defaultdict(int, trimmed_freq)
@@ -183,18 +145,14 @@ class DiskMemCache:
         return hashlib.md5(f"{fen}:{depth}".encode()).hexdigest()
 
     def _hit_rate(self):
-        total = self.hits + self.misses
-        return (100 * self.hits / total) if total else 0
+        t = self.hits + self.misses
+        return (100 * self.hits / t) if t else 0
 
     def _maybe_prune(self):
         if self.lookup_count % self.check_interval != 0:
             return
-        if self._hit_rate() < self.prune_threshold:
-            print(
-                f"\nHit rate low ({self._hit_rate():.1f}%), pruning & saving..."
-            )
-            self.save()
-        elif self.periodic_save:
+        hr = self._hit_rate()
+        if hr < self.prune_threshold or self.periodic_save:
             self.save()
 
     def _reset_stats(self):
