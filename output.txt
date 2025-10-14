@@ -1,7 +1,7 @@
 
 Loading cache...
 Loading cache from position_cache.pkl.gz (0.1 MB)...
-  Loaded 1,379 positions
+  Loaded 1,581 positions
 
 Fetching games...
   14 user, 22 random
@@ -9,4 +9,4 @@ Fetching games...
 Analyzing user games...
   1/14 games  2/14 games  3/14 games  4/14 games  5/14 games  6/14 games  7/14 games  8/14 games  9/14 games  10/14 games  11/14 games  12/14 games  13/14 games  14/14 games
 Analyzing random games...
-  1/22 games  2/22 games  3/22 games  4/22 games
+  1/22 games  2/22 games
