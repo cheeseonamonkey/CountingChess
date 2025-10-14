@@ -17,8 +17,8 @@ class DiskMemCache:
 
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
-                 prune_threshold=8,
-                 check_interval=6999,
+                 prune_threshold=5.5,
+                 check_interval=299,
                  max_cache_size=275_000,
                  periodic_save=True):
         """

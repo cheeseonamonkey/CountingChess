@@ -11,8 +11,8 @@ def main():
     Stockfish.load_cache()
 
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)
-    random_games = Fetchers.fetch_random_games(2800, 35, 20)
+    user_games = Fetchers.fetch_all_users_games([user], None)[:99]
+    random_games = Fetchers.fetch_random_games(200, 35, 20)
 
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
