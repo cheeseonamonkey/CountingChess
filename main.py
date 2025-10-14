@@ -14,7 +14,7 @@ def main():
 
     print("Fetching games...")
     user_games = Fetchers.fetch_all_users_games([user], None)
-    random_games = Fetchers.fetch_random_games(2500, 55, 28)
+    random_games = Fetchers.fetch_random_games(2200, 15, 40)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
     # Analyze every game once
