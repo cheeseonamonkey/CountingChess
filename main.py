@@ -4,44 +4,44 @@ from CalcHelpers import print_stats
 
 
 def main():
-    sf_path, depth, user = "./stockfish/stockfish-ubuntu-x86-64-avx2", 10, "ffffattyyyy"
+    sf_path = "./stockfish/stockfish-ubuntu-x86-64-avx2"
+    depth = 10
+    user = "ffffattyyyy"
     CalcHelpers.user = user
+
     print("\nLoading cache...")
     Stockfish.load_cache()
+
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)[:15]
-    random_games = Fetchers.fetch_random_games(40, 45, 28)
+    user_games = Fetchers.fetch_all_users_games([user], None)
+    random_games = Fetchers.fetch_random_games(2500, 55, 28)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
-    # Analyze every game exactly once by concatenating lists, then split results.
+    # Analyze every game once
     all_games = list(user_games) + list(random_games)
     print("Analyzing all games (single pass)...")
     all_results = Stockfish.analyze_games(all_games, sf_path, depth, [user],
                                           True)
 
-    # split results back
+    # Split results
     ulen = len(user_games)
-    user_results = all_results[:ulen]
-    random_results = all_results[ulen:]
+    user_results, random_results = all_results[:ulen], all_results[ulen:]
 
     print("Computing stats...\n")
 
-    # Filter valid user results
-    valid_user = [(g, r) for g, r in zip(user_games, user_results)
-                  if r is not None]
-    user_games, user_results = zip(*valid_user) if valid_user else ([], [])
+    # Filter valid results
+    def filter_valid(games, results):
+        valid = [(g, r) for g, r in zip(games, results) if r is not None]
+        return zip(*valid) if valid else ([], [])
 
-    # Filter valid random results
-    valid_random = [(g, r) for g, r in zip(random_games, random_results)
-                    if r is not None]
-    random_games, random_results = zip(*valid_random) if valid_random else ([],
-                                                                            [])
+    user_games, user_results = filter_valid(user_games, user_results)
+    random_games, random_results = filter_valid(random_games, random_results)
 
     print(
         f"  {len(user_results)} valid user, {len(random_results)} valid random\n"
     )
 
-    # Sort and split random games by ELO (reuse same logic)
+    # Sort and split random games by ELO
     sorted_pairs = sorted(zip(random_games, random_results),
                           key=lambda x: (x[1][4] or 0) if x[1] else 0)
     n = len(sorted_pairs)
@@ -67,6 +67,7 @@ def main():
             list(mid_results),
             list(top_results)
         ])
+
     Stockfish.save_cache()
 
 
