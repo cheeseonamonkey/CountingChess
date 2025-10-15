@@ -3,9 +3,11 @@ import Fetchers, CalcHelpers, Stockfish
 from CalcHelpers import print_stats
 import time
 
+print("\n ==== Hello! ==== \n")
+
 
 def main():
-    print("Hello!\n")
+
     sf_path = "./stockfish/stockfish-16-ubuntu-x86-64-avx2"
     depth = 10
     user = "ffffattyyyy"
@@ -16,7 +18,7 @@ def main():
 
     print("Fetching games...")
     user_games = Fetchers.fetch_all_users_games([user], None)
-    random_games = Fetchers.fetch_random_games(3000, 10, 99)
+    random_games = Fetchers.fetch_random_games(3000, 15, 99)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
     # Analyze every game once
