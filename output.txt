@@ -1,0 +1,135 @@
+Hello!
+
+
+Loading cache...
+  ✓ loaded 671 positions from position_cache.pkl.gz
+Fetching games...
+  5 user, 10 random
+
+Analyzing all games (single pass)...
+  1/1 games
+Analyzing: 6.7% (1/15) - 5.01 games/sec, 80.13 pos/sec  1/1 games
+Analyzing: 13.3% (2/15) - 4.80 games/sec, 177.60 pos/sec  1/1 games
+Analyzing: 20.0% (3/15) - 4.72 games/sec, 125.97 pos/sec  1/1 games
+Analyzing: 26.7% (4/15) - 4.62 games/sec, 109.66 pos/sec  1/1 games
+Analyzing: 33.3% (5/15) - 4.62 games/sec, 147.90 pos/sec  1/1 games
+Analyzing: 40.0% (6/15) - 4.68 games/sec, 152.79 pos/sec  1/1 games
+Analyzing: 46.7% (7/15) - 4.70 games/sec, 175.23 pos/sec  1/1 games
+Analyzing: 53.3% (8/15) - 4.65 games/sec, 227.84 pos/sec  1/1 games
+Analyzing: 60.0% (9/15) - 4.50 games/sec, 211.59 pos/sec  1/1 games
+Analyzing: 66.7% (10/15) - 4.46 games/sec, 234.57 pos/sec  1/1 games
+Analyzing: 73.3% (11/15) - 4.37 games/sec, 214.12 pos/sec  1/1 games
+Analyzing: 80.0% (12/15) - 4.33 games/sec, 201.57 pos/sec  1/1 games
+Analyzing: 86.7% (13/15) - 4.34 games/sec, 200.18 pos/sec  1/1 games
+Analyzing: 93.3% (14/15) - 4.37 games/sec, 195.78 pos/sec  1/1 games
+Analyzing: 100.0% (15/15) - 4.40 games/sec, 207.06 pos/sec
+Computing stats...
+
+  5 valid user, 10 valid random
+
+
+Metric         Me    Bott     Mid     Top
+=========================================
+n (count)       5       1       7       1
+ACPL         83.1   105.9    80.8   154.0
+Sharp        85.8   108.2    84.6   156.6
+Closed       13.4    11.8    10.1    10.4
+-----------------------------------------
+P ACPL       91.1    92.0   101.3   113.7
+N ACPL       97.3   100.4    77.3   232.0
+B ACPL       53.5    77.2    60.5    78.2
+R ACPL       28.1   257.8    99.6   151.4
+Q ACPL       82.9     9.0    94.5   177.7
+K ACPL      155.7    20.0    27.9   202.6
+-----------------------------------------
+P %          32.5    48.8    33.7    28.1
+N %          18.2    12.2    12.5    12.5
+B %          19.5    12.2    12.0    14.1
+R %           9.1    14.6    13.0     7.8
+Q %          13.0     7.3    13.2    23.4
+K %           7.8     4.9    15.7    14.1
+-----------------------------------------
+Resign%     100.0   100.0   100.0     0.0
+Best%        24.4    40.5    38.7    29.2
+-----------------------------------------
+OO-WR        0.0     0.0     0.0     0.0
+OOO-WR       0.0     0.0     0.0     0.0
+C <=4        0.0     0.0     0.0     0.0
+C 5-6        0.0     0.0     0.0     0.0
+C 7-8        0.0     0.0     0.0     0.0
+C 9-10     100.0     0.0     0.0     0.0
+C 11-12      0.0     0.0     0.0     0.0
+C 13-15      0.0     0.0     0.0     0.0
+C >15      100.0     0.0    66.7     0.0
+-----------------------------------------
+
+Me Game# per Day:
+   1 	A: 83.1 	W: 80.0% 	n=  5
+
+Me Time of Day:
+  00h 	A:  0.0 	W:  0.0% 	n=  0
+  01h 	A: 98.1 	W: 66.7% 	n=  3
+  02h 	A:114.9 	W:100.0% 	n=  1
+  03h 	A:  0.0 	W:  0.0% 	n=  0
+  04h 	A:  0.0 	W:  0.0% 	n=  0
+  05h 	A:  0.0 	W:  0.0% 	n=  0
+  06h 	A:  0.0 	W:  0.0% 	n=  0
+  07h 	A:  0.0 	W:  0.0% 	n=  0
+  08h 	A:  0.0 	W:  0.0% 	n=  0
+  09h 	A:  0.0 	W:  0.0% 	n=  0
+  10h 	A:  0.0 	W:  0.0% 	n=  0
+  11h 	A:  0.0 	W:  0.0% 	n=  0
+  12h 	A:  0.0 	W:  0.0% 	n=  0
+  13h 	A:  0.0 	W:  0.0% 	n=  0
+  14h 	A:  0.0 	W:  0.0% 	n=  0
+  15h 	A: 58.4 	W:100.0% 	n=  1
+  16h 	A:  0.0 	W:  0.0% 	n=  0
+  17h 	A:  0.0 	W:  0.0% 	n=  0
+  18h 	A:  0.0 	W:  0.0% 	n=  0
+  19h 	A:  0.0 	W:  0.0% 	n=  0
+  20h 	A:  0.0 	W:  0.0% 	n=  0
+  21h 	A:  0.0 	W:  0.0% 	n=  0
+  22h 	A:  0.0 	W:  0.0% 	n=  0
+  23h 	A:  0.0 	W:  0.0% 	n=  0
+  ✓ saved 671 positions to position_cache.pkl.gz
+
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-

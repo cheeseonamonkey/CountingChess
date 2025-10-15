@@ -3,12 +3,10 @@ import Fetchers, CalcHelpers, Stockfish
 from CalcHelpers import print_stats
 import time
 
-print("\n ==== Hello! ==== \n")
-
 
 def main():
-
-    sf_path = "./stockfish/stockfish-16-ubuntu-x86-64-avx2"
+    print("Hello!\n")
+    sf_path = "./stockfish/stockfish-ubuntu-x86-64-avx2"
     depth = 10
     user = "ffffattyyyy"
     CalcHelpers.user = user
@@ -17,34 +15,30 @@ def main():
     Stockfish.load_cache()
 
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)
-    random_games = Fetchers.fetch_random_games(3000, 15, 99)
+    user_games = Fetchers.fetch_all_users_games([user], None)[:5]
+    random_games = Fetchers.fetch_random_games(10, 10, 99)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
     # Analyze every game once
     all_games = list(user_games) + list(random_games)
     print("Analyzing all games (single pass)...")
-
-    # Assuming Stockfish has an analyze_game function for single games;
-    # if not, this would need to be adjusted in the Stockfish module.
     all_results = []
     start_time = time.time()
     total_positions = 0
-    for i, game in enumerate(all_games, 1):
-        result = Stockfish.analyze_game(game, sf_path, depth, [user], True)
+    for i, game in enumerate(all_games):
+        result = Stockfish.analyze_games([game], sf_path, depth, [user],
+                                         True)[0]
         all_results.append(result)
-
-        # Calculate positions for this game: number of half-moves + 1 (starting position)
-        num_moves = len(list(game.mainline_moves()))
-        positions_in_game = num_moves + 1
-        total_positions += positions_in_game
-
+        if result:
+            total_positions += len(result[0])
         elapsed = time.time() - start_time
-        if elapsed > 0:
-            pps = total_positions / elapsed
-            print(
-                f"Progress: {i}/{len(all_games)} games ({total_positions} positions total), {pps:.2f} pos/sec"
-            )
+        progress = (i + 1) / len(all_games) * 100
+        games_per_sec = (i + 1) / elapsed if elapsed > 0 else 0
+        positions_per_sec = total_positions / elapsed if elapsed > 0 else 0
+        print(
+            f"Analyzing: {progress:.1f}% ({i+1}/{len(all_games)}) - {games_per_sec:.2f} games/sec, {positions_per_sec:.2f} pos/sec",
+            end='\r')
+    print()  # Move to new line after completion
 
     # Split results
     ulen = len(user_games)

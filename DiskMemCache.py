@@ -1,40 +1,39 @@
-import os
-from collections import defaultdict
+import gzip, pickle, hashlib, heapq, time
+from collections import defaultdict, OrderedDict
 from pathlib import Path
-import gzip
-import pickle
-import hashlib
-import heapq
 
 
 class DiskMemCache:
-    """
-    Persistent cache for Stockfish analysis results, with LFU-based pruning.
-    """
+    """Persistent LFU cache (frequency-based) for Stockfish or similar analysis."""
 
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
                  prune_threshold=5.5,
-                 check_interval=1999,
-                 max_cache_size=210_000,
-                 periodic_save=True):
+                 check_interval=9999,
+                 max_cache_size=120_000,
+                 periodic_save=True,
+                 key_cache_size=10_000):
         self.cache_file = Path(cache_file)
-        self.cache = {}
-        self.freq = defaultdict(int)
+        self.cache, self.freq = {}, defaultdict(int)
         self.hits = self.misses = self.lookup_count = 0
-        self.check_interval = check_interval
-        self.prune_threshold = prune_threshold
-        self.max_cache_size = max_cache_size
+        self.prune_threshold = float(prune_threshold)
+        self.check_interval = max(1, int(check_interval))
+        self.max_cache_size = int(max_cache_size)
         self.periodic_save = periodic_save
+        self._key_cache = OrderedDict()
+        self._key_cache_size = max(1000, key_cache_size)
+        self._soft_cap_mult = 1.2
+        self._freq_cap = 1_000_000_000
+        self._last_prune_time = None
 
-    # ---------------- Core API ----------------
+    # ---------- Core API ----------
 
     def get(self, fen, depth):
         k = self._key(fen, depth)
         v = self.cache.get(k)
         if v is not None:
             self.hits += 1
-            self.freq[k] += 1
+            self.freq[k] = min(self._freq_cap, self.freq.get(k, 0) + 1)
         else:
             self.misses += 1
         self.lookup_count += 1
@@ -42,124 +41,147 @@ class DiskMemCache:
         return v
 
     def get_many(self, positions):
-        hits = {}
-        misses = []
-
-        append_miss = misses.append
-        cache_get = self.cache.get
-        freq_get = self.freq.get
-
+        hits, misses = {}, []
+        fget, cache, freq, cap = self.freq.get, self.cache, self.freq, self._freq_cap
         for fen, depth in positions:
             k = self._key(fen, depth)
-            v = cache_get(k)
+            v = cache.get(k)
             if v is not None:
                 hits[(fen, depth)] = v
+                freq[k] = min(cap, fget(k, 0) + 1)
                 self.hits += 1
-                self.freq[k] += 1
             else:
-                append_miss((fen, depth, k))
+                misses.append((fen, depth))
                 self.misses += 1
             self.lookup_count += 1
-
-        # Use heapq.nlargest instead of full sort
-        miss_list = [(fen, depth) for fen, depth, k in heapq.nlargest(
-            len(misses), misses, key=lambda x: freq_get(x[2], 0))]
-
         self._maybe_prune()
-        return hits, miss_list
+        return hits, misses
 
     def put(self, fen, depth, value):
         k = self._key(fen, depth)
         self.cache[k] = value
-        self.freq[k] += 1
+        self.freq[k] = min(self._freq_cap, self.freq.get(k, 0) + 1)
+        if len(self.cache) > self.max_cache_size * self._soft_cap_mult:
+            self._prune_in_memory()
 
     def put_many(self, results):
-        cache_set = self.cache.__setitem__
-        freq = self.freq
+        freq, cache, cap = self.freq, self.cache, self._freq_cap
         for fen, depth, value in results:
             k = self._key(fen, depth)
-            cache_set(k, value)
-            freq[k] += 1
+            cache[k] = value
+            freq[k] = min(cap, freq.get(k, 0) + 1)
+        if len(cache) > self.max_cache_size * self._soft_cap_mult:
+            self._prune_in_memory()
 
-    # ---------------- Persistence ----------------
+    # ---------- Persistence ----------
 
     def load(self):
         if not self.cache_file.exists():
             return
         try:
-            print(f"Decompressing cache from {self.cache_file}...")
             with gzip.open(self.cache_file, "rb") as f:
                 data = pickle.load(f)
-        except (EOFError, pickle.UnpicklingError):
-            self.cache = {}
-            self.freq = defaultdict(int)
+        except Exception:
+            self.cache, self.freq = {}, defaultdict(int)
             return
-
         if isinstance(data, dict) and 'cache' in data:
-            self.cache = data['cache']
+            self.cache = data.get('cache', {})
             self.freq = defaultdict(int, data.get('freq', {}))
         else:
-            self.cache = data
-            self.freq = defaultdict(int)
-
-        for k in self.cache.keys():
+            self.cache, self.freq = data, defaultdict(int)
+        for k in self.cache:
             self.freq.setdefault(k, 1)
-        print(f"Loaded {len(self.cache)} positions from cache.\n")
+        print(f"  ✓ loaded {len(self.cache)} positions from {self.cache_file}")
 
     def save(self):
         if not self.cache:
             return
-
-        if len(self.cache) > self.max_cache_size:
-            heap = []
-            heap_append = heapq.heappush
-            heap_pop = heapq.heappushpop
-            freq_get = self.freq.get
-            for k in self.cache.keys():
-                f = freq_get(k, 1)
-                if len(heap) < self.max_cache_size:
-                    heap_append(heap, (f, k))
-                else:
-                    heap_pop(heap, (f, k))
-            top_keys = {k for _, k in heap}
-            trimmed_cache = {k: self.cache[k] for k in top_keys}
-            trimmed_freq = {k: self.freq[k] for k in top_keys}
+        n = len(self.cache)
+        if n <= self.max_cache_size:
+            top_keys = set(self.cache)
         else:
-            trimmed_cache = self.cache
-            trimmed_freq = dict(self.freq)
-
+            items = ((self.freq.get(k, 1), k) for k in self.cache)
+            top_keys = {
+                k
+                for _, k in heapq.nlargest(
+                    self.max_cache_size, items, key=lambda x: x[0])
+            }
+        trimmed_cache = {k: self.cache[k] for k in top_keys}
+        trimmed_freq = {k: self.freq.get(k, 1) for k in top_keys}
         data = {'cache': trimmed_cache, 'freq': trimmed_freq}
-        tmp_path = self.cache_file.with_suffix(".tmp")
+        tmp = self.cache_file.with_suffix('.tmp')
         try:
-            with gzip.open(tmp_path, "wb") as f:
-                pickle.dump(data, f)
-            os.replace(tmp_path, self.cache_file)
+            with gzip.open(tmp, 'wb') as f:
+                pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            tmp.replace(self.cache_file)
         finally:
-            tmp_path.unlink(missing_ok=True)
-
-        self.cache = trimmed_cache
-        self.freq = defaultdict(int, trimmed_freq)
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+        self.cache, self.freq = trimmed_cache, defaultdict(int, trimmed_freq)
         self._reset_stats()
+        self._last_prune_time = time.time()
+        print(f"  ✓ saved {n} positions to {self.cache_file}")
 
-        print(
-            f"Saved {len(self.cache)} positions to cache.  (hit rate: {self._hit_rate():.1f}%)"
-        )
-
-    # ---------------- Internals ----------------
+    # ---------- Internals ----------
 
     def _key(self, fen, depth):
-        return hashlib.md5(f"{fen}:{depth}".encode()).hexdigest()
+        ck = (fen, int(depth))
+        kc = self._key_cache
+        if ck in kc:
+            kc.move_to_end(ck)
+            return kc[ck]
+        m = hashlib.md5()
+        m.update(fen.encode('utf-8'))
+        m.update(b':')
+        m.update(str(depth).encode('ascii'))
+        key = m.hexdigest()
+        kc[ck] = key
+        if len(kc) > self._key_cache_size:
+            kc.popitem(last=False)
+        return key
 
     def _hit_rate(self):
         t = self.hits + self.misses
-        return (100 * self.hits / t) if t else 0
+        return 100 * self.hits / t if t else 0
 
     def _maybe_prune(self):
+        csize = len(self.cache)
+        if csize > self.max_cache_size * self._soft_cap_mult:
+            self._prune_in_memory()
+            if self.periodic_save:
+                self.save()
+            return
         if self.lookup_count % self.check_interval != 0:
             return
-        hr = self._hit_rate()
-        if hr < self.prune_threshold or self.periodic_save:
+        if self._hit_rate() < self.prune_threshold or self.periodic_save:
             self.save()
+
+    def _prune_in_memory(self):
+        n = len(self.cache)
+        if n <= self.max_cache_size:
+            return
+        items = ((self.freq.get(k, 1), k) for k in self.cache)
+        keep = {
+            k
+            for _, k in heapq.nlargest(
+                self.max_cache_size, items, key=lambda x: x[0])
+        }
+        for k in list(self.cache.keys()):
+            if k not in keep:
+                self.cache.pop(k, None)
+                self.freq.pop(k, None)
+        self._last_prune_time = time.time()
+
+    def force_prune(self):
+        return self._prune_in_memory()
 
     def _reset_stats(self):
         self.hits = self.misses = self.lookup_count = 0
+
+    def stats(self):
+        return dict(cache_size=len(self.cache),
+                    freq_map_size=len(self.freq),
+                    hits=self.hits,
+                    misses=self.misses,
+                    hit_rate=self._hit_rate(),
+                    last_prune=self._last_prune_time)

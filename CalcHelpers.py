@@ -3,21 +3,19 @@ from collections import defaultdict
 import chess.pgn
 from io import StringIO
 
-user = None
-
 
 # --- Internal helpers ---
-def _pdiff(r):
+def _pdiff(results):
     return [
         max(0, ev[i - 1] - ev[i] if i % 2 else ev[i] - ev[i - 1])
-        for ev, _, _, c, *_ in r for i in range(1, len(ev))
+        for ev, _, _, c, *_ in results for i in range(1, len(ev))
         if c is None or i % 2 == c
     ]
 
 
-def _metric(r, fn):
-    d = fn(r)
-    return sum(d) / len(d) if d else 0
+def _metric(results, fn):
+    diffs = fn(results)
+    return sum(diffs) / len(diffs) if diffs else 0
 
 
 # --- Metrics ---
@@ -35,14 +33,15 @@ METRICS = {
                if (lost := [x for x in r if x[7] is False]) else 0),
     'best_move_rate':
     lambda r: 100 * _metric(r, lambda x:
-                            [b for *_, bms, _, _ in x for b in bms])
+                            [b for *_, bms, _, _ in x for b in bms]),
 }
 
 
 # --- Per-piece metrics ---
-def pmetrics(r):
-    acpl, cnt = defaultdict(float), defaultdict(int)
-    for ev, pcs, _, c, *_ in r:
+def pmetrics(results):
+    acpl = defaultdict(float)
+    cnt = defaultdict(int)
+    for ev, pcs, _, c, *_ in results:
         for i in range(1, len(ev)):
             if c is None or i % 2 == c:
                 diff = max(0,
@@ -56,82 +55,96 @@ def pmetrics(r):
 
 
 # --- Castle & turn metrics ---
-def cmetrics(r):
-    side, turn = defaultdict(lambda: [0, 0]), defaultdict(lambda: [0, 0])
-    for *_, ct, cs, won, _, _, _, _ in r:
+def cmetrics(results):
+    side = defaultdict(lambda: [0, 0])
+    turn = defaultdict(lambda: [0, 0])
+    for *_, ct, cs, won, _, _, _, _ in results:
         if cs and won is not None:
             side[cs][won] += 1
             grp = ("<=4" if ct <= 4 else "5-6" if ct <= 6 else "7-8"
                    if ct <= 8 else "9-10" if ct <= 10 else "11-12" if ct <=
                    12 else "13-15" if ct <= 15 else ">15")
             turn[grp][won] += 1
-    return ({
-        k: 100 * v[1] / sum(v) if sum(v) else 0
-        for k, v in side.items()
-    }, {
-        k: 100 * v[1] / sum(v) if sum(v) else 0
-        for k, v in turn.items()
-    })
+    return (
+        {
+            k: 100 * v[1] / sum(v) if sum(v) else 0
+            for k, v in side.items()
+        },
+        {
+            k: 100 * v[1] / sum(v) if sum(v) else 0
+            for k, v in turn.items()
+        },
+    )
 
 
 # --- Time & game metrics ---
-def tmetrics(r):
-    acpl, wins = defaultdict(list), defaultdict(lambda: [0, 0])
-    for ev, _, _, c, _, _, _, won, _, _, h, _ in r:
+def tmetrics(results):
+    acpl = defaultdict(list)
+    wins = defaultdict(lambda: [0, 0])
+    for ev, _, _, c, _, _, _, won, _, _, h, _ in results:
         if h is not None:
             diffs = [
                 max(0, ev[i - 1] - ev[i] if i % 2 else ev[i] - ev[i - 1])
                 for i in range(1, len(ev)) if c is None or i % 2 == c
             ]
-            if diffs: acpl[h].extend(diffs)
-            if won is not None: wins[h][won] += 1
-    return ({
-        h: sum(d) / len(d)
-        for h, d in acpl.items()
-    }, {
-        h: 100 * v[1] / sum(v) if sum(v) else 0
-        for h, v in wins.items()
-    })
+            if diffs:
+                acpl[h].extend(diffs)
+            if won is not None:
+                wins[h][won] += 1
+    return (
+        {
+            h: sum(d) / len(d)
+            for h, d in acpl.items() if d
+        },
+        {
+            h: 100 * v[1] / sum(v) if sum(v) else 0
+            for h, v in wins.items()
+        },
+    )
 
 
-def gmetrics(r):
-    acpl, wins = defaultdict(list), defaultdict(lambda: [0, 0])
-    for ev, _, _, c, _, _, _, won, _, _, _, gn in r:
+def gmetrics(results):
+    acpl = defaultdict(list)
+    wins = defaultdict(lambda: [0, 0])
+    for ev, _, _, c, _, _, _, won, _, _, _, gn in results:
         if gn is not None:
             diffs = [
                 max(0, ev[i - 1] - ev[i] if i % 2 else ev[i] - ev[i - 1])
                 for i in range(1, len(ev)) if c is None or i % 2 == c
             ]
-            if diffs: acpl[gn].extend(diffs)
-            if won is not None: wins[gn][won] += 1
-    return ({
-        g: sum(d) / len(d)
-        for g, d in acpl.items()
-    }, {
-        g: 100 * v[1] / sum(v) if sum(v) else 0
-        for g, v in wins.items()
-    })
+            if diffs:
+                acpl[gn].extend(diffs)
+            if won is not None:
+                wins[gn][won] += 1
+    return (
+        {
+            g: sum(d) / len(d)
+            for g, d in acpl.items() if d
+        },
+        {
+            g: 100 * v[1] / sum(v) if sum(v) else 0
+            for g, v in wins.items()
+        },
+    )
 
 
 # --- ECO stats ---
 def eco_stats(pgns, res, users=None):
-    ew, eb = defaultdict(lambda: {
-        'a': [],
-        'w': 0,
-        'l': 0
-    }), defaultdict(lambda: {
-        'a': [],
-        'w': 0,
-        'l': 0
-    })
+    """
+    Compute ECO statistics for given users (or all if None).
+    """
+    ew = defaultdict(lambda: {'a': [], 'w': 0, 'l': 0})
+    eb = defaultdict(lambda: {'a': [], 'w': 0, 'l': 0})
     ul = [u.lower() for u in (users or [])]
 
     for pgn, rs in zip(pgns, res):
-        if not rs: continue
+        if not rs:
+            continue
         try:
             g = chess.pgn.read_game(StringIO(pgn)) if isinstance(pgn,
                                                                  str) else pgn
-            if not g or not (eco := g.headers.get("ECO")): continue
+            if not g or not (eco := g.headers.get("ECO")):
+                continue
             w, b = g.headers.get("White",
                                  "").lower(), g.headers.get("Black",
                                                             "").lower()
@@ -147,13 +160,13 @@ def eco_stats(pgns, res, users=None):
                 ed[eco]['a'].append(a)
                 if rest[5] is not None:
                     ed[eco]['w' if rest[5] else 'l'] += 1
-        except:
+        except Exception:
             pass
 
     def summar(d):
         return {
             e: {
-                'a': sum(v['a']) / len(v['a']),
+                'a': sum(v['a']) / len(v['a']) if v['a'] else 0,
                 'w':
                 100 * v['w'] / (v['w'] + v['l']) if v['w'] + v['l'] else 0,
                 'n': v['w'] + v['l']
@@ -165,13 +178,16 @@ def eco_stats(pgns, res, users=None):
 
 
 # --- Print stats ---
-def print_stats(lbls, dsets, pgn_sets=None, res_sets=None):
+def print_stats(lbls, dsets, pgn_sets=None, res_sets=None, user=None):
+    """
+    Print and return chess statistics for datasets.
+    """
     pn = {1: "P", 2: "N", 3: "B", 4: "R", 5: "Q", 6: "K"}
     stats = [{k: f(d) for k, f in METRICS.items()} for d in dsets]
-    ps, cs, ts, gs = [pmetrics(d)
-                      for d in dsets], [cmetrics(d) for d in dsets
-                                        ], [tmetrics(d) for d in dsets
-                                            ], [gmetrics(d) for d in dsets]
+    ps = [pmetrics(d) for d in dsets]
+    cs = [cmetrics(d) for d in dsets]
+    ts = [tmetrics(d) for d in dsets]
+    gs = [gmetrics(d) for d in dsets]
 
     counts = [len(d) for d in dsets]
     w = 9 + 8 * len(lbls)
@@ -209,7 +225,8 @@ def print_stats(lbls, dsets, pgn_sets=None, res_sets=None):
     # ECO stats
     if pgn_sets and res_sets:
         for i, (l, p, r) in enumerate(zip(lbls, pgn_sets, res_sets)):
-            ew, eb = eco_stats(p, r, [user] if i == 0 else None)
+            users_param = [user] if user and i == 0 else None
+            ew, eb = eco_stats(p, r, users=users_param)
             if ew or eb:
                 print(f"\n{l} ECO:")
                 for color, data in [("W", ew), ("B", eb)]:
@@ -225,7 +242,7 @@ def print_stats(lbls, dsets, pgn_sets=None, res_sets=None):
         user_games = dsets[0]
         if gs[0][0] or gs[0][1]:
             print(f"\n{lbls[0]} Game# per Day:")
-            keys = sorted(set(gs[0][0].keys()) | set(gs[0][1].keys()))
+            keys = sorted(set(gs[0][0]) | set(gs[0][1]))
             for g in keys:
                 n = sum(1 for ev, *_, _, _, _, _, _, _, _, _, gn in user_games
                         if gn == g)
