@@ -16,7 +16,7 @@ class DiskMemCache:
                  cache_file="position_cache.pkl.gz",
                  prune_threshold=5.5,
                  check_interval=1999,
-                 max_cache_size=250_000,
+                 max_cache_size=210_000,
                  periodic_save=True):
         self.cache_file = Path(cache_file)
         self.cache = {}
@@ -140,6 +140,10 @@ class DiskMemCache:
         self.cache = trimmed_cache
         self.freq = defaultdict(int, trimmed_freq)
         self._reset_stats()
+
+        print(
+            f"Saved {len(self.cache)} positions to cache.  (hit rate: {self._hit_rate():.1f}%)"
+        )
 
     # ---------------- Internals ----------------
 
