@@ -87,6 +87,7 @@ class DiskMemCache:
         if not self.cache_file.exists():
             return
         try:
+            print(f"Decompressing cache from {self.cache_file}...")
             with gzip.open(self.cache_file, "rb") as f:
                 data = pickle.load(f)
         except (EOFError, pickle.UnpicklingError):
@@ -103,6 +104,7 @@ class DiskMemCache:
 
         for k in self.cache.keys():
             self.freq.setdefault(k, 1)
+        print(f"Loaded {len(self.cache)} positions from cache.")
 
     def save(self):
         if not self.cache:
