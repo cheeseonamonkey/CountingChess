@@ -15,8 +15,8 @@ def main():
     Stockfish.load_cache()
 
     print("Fetching games...")
-    user_games = Fetchers.fetch_all_users_games([user], None)
-    random_games = Fetchers.fetch_random_games(3500, 10, 99)
+    user_games = Fetchers.fetch_all_users_games([user], None)[:50]
+    random_games = Fetchers.fetch_random_games(70, 5, 99)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 
     # Analyze every game once
@@ -36,9 +36,9 @@ def main():
         games_per_sec = (i + 1) / elapsed if elapsed > 0 else 0
         positions_per_sec = total_positions / elapsed if elapsed > 0 else 0
         print(
-            f"Analyzing: {progress:.1f}% ({i+1}/{len(all_games)}) - {games_per_sec:.2f} games/sec, {positions_per_sec:.2f} pos/sec",
+            f"Analyzing: {progress:.1f}% ({i+1}/{len(all_games)}):    \n   {games_per_sec:.2f} games/sec, \n   {positions_per_sec:.2f} pos/sec",
             end='\r')
-    print()  # Move to new line after completion
+    print()  
 
     # Split results
     ulen = len(user_games)
@@ -63,11 +63,11 @@ def main():
                           key=lambda x: (x[1][4] or 0) if x[1] else 0)
     n = len(sorted_pairs)
     bott_games, bott_results = zip(*sorted_pairs[:int(n *
-                                                      0.15)]) if n else ([],
+                                                      0.19)]) if n else ([],
                                                                          [])
     mid_games, mid_results = zip(
-        *sorted_pairs[int(n * 0.17):int(n * 0.87)]) if n else ([], [])
-    top_games, top_results = zip(*sorted_pairs[int(n * 0.90):]) if n else ([],
+        *sorted_pairs[int(n * 0.2):int(n * 0.9)]) if n else ([], [])
+    top_games, top_results = zip(*sorted_pairs[int(n * 0.91):]) if n else ([],
                                                                            [])
 
     print_stats(["Me", "Bott", "Mid", "Top"], [

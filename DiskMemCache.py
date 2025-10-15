@@ -9,10 +9,10 @@ class DiskMemCache:
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
                  prune_threshold=6.0,
-                 check_interval=19999,
-                 max_cache_size=100_000,
+                 check_interval=499,
+                 max_cache_size=50_000,
                  periodic_save=True,
-                 key_cache_size=8_000):
+                 key_cache_size=9_000):
         self.cache_file = Path(cache_file)
         self.cache, self.freq = {}, defaultdict(int)
         self.hits = self.misses = self.lookup_count = 0
@@ -77,11 +77,13 @@ class DiskMemCache:
 
     def load(self):
         if not self.cache_file.exists():
+            print(f"  ! cache file {self.cache_file} does not exist")
             return
         try:
             with gzip.open(self.cache_file, "rb") as f:
                 data = pickle.load(f)
-        except Exception:
+        except Exception as e:
+            print(f"  ! failed to load cache: {e}")
             self.cache, self.freq = {}, defaultdict(int)
             return
         if isinstance(data, dict) and 'cache' in data:
@@ -97,6 +99,7 @@ class DiskMemCache:
         if not self.cache:
             return
         n = len(self.cache)
+        print(f"  - saving: before trim {n} positions (max {self.max_cache_size})")
         if n <= self.max_cache_size:
             top_keys = set(self.cache)
         else:
@@ -108,6 +111,7 @@ class DiskMemCache:
             }
         trimmed_cache = {k: self.cache[k] for k in top_keys}
         trimmed_freq = {k: self.freq.get(k, 1) for k in top_keys}
+        m = len(trimmed_cache)
         data = {'cache': trimmed_cache, 'freq': trimmed_freq}
         tmp = self.cache_file.with_suffix('.tmp')
         try:
@@ -120,7 +124,7 @@ class DiskMemCache:
         self.cache, self.freq = trimmed_cache, defaultdict(int, trimmed_freq)
         self._reset_stats()
         self._last_prune_time = time.time()
-        print(f"  ✓ saved {n} positions to {self.cache_file}")
+        print(f"  ✓ saved {m} positions to {self.cache_file} (trimmed from {n})")
 
     # ---------- Internals ----------
 
@@ -160,6 +164,7 @@ class DiskMemCache:
         n = len(self.cache)
         if n <= self.max_cache_size:
             return
+        print(f"  - pruning in-memory: before {n} -> max {self.max_cache_size}")
         items = ((self.freq.get(k, 1), k) for k in self.cache)
         keep = {
             k
@@ -170,6 +175,8 @@ class DiskMemCache:
             if k not in keep:
                 self.cache.pop(k, None)
                 self.freq.pop(k, None)
+        m = len(self.cache)
+        print(f"  ✓ pruned in-memory to {m} positions")
         self._last_prune_time = time.time()
 
     def force_prune(self):
