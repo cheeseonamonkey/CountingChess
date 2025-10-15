@@ -266,3 +266,105 @@ def print_stats(lbls, dsets, pgn_sets=None, res_sets=None, user=None):
         "time_metrics": ts,
         "game_metrics": gs
     }
+
+
+# --- SPEEDUP HELPERS (non-invasive, call explicitly) ---
+# usage: fast_eval_fens(fens, "/path/to/stockfish", depth=12, threads=2, procs=4)
+def fast_eval_fens(fens,
+                   engine_path,
+                   depth=12,
+                   threads=1,
+                   procs=4,
+                   hash_mb=64,
+                   cache=True):
+    """
+    Parallel, process-local persistent engine workers + optional FEN caching.
+    Doesn't import extra libs at module import time (keeps your hooks).
+    """
+    if not fens:
+        return []
+    from multiprocessing import Pool
+    import atexit, functools, hashlib, json, time
+
+    # small in-process LRU cache (per master process) to avoid duplicates before mapping
+    seen = {}
+    unique = []
+    idxs = []
+    for i, f in enumerate(fens):
+        k = f if not cache else hashlib.md5(f.encode()).hexdigest()
+        if k in seen:
+            idxs.append(seen[k])
+        else:
+            seen[k] = len(unique)
+            unique.append(f)
+            idxs.append(seen[k])
+
+    # worker initializer sets globals in each process (engine opened once per worker)
+    def _init_worker(ep, th, hm, dp):
+        global _ENGINE, _DEPTH
+        import chess, chess.engine
+        _DEPTH = dp
+        _ENGINE = chess.engine.SimpleEngine.popen_uci(ep)
+        try:
+            _ENGINE.configure({"Threads": th, "Hash": hm})
+        except Exception:
+            pass
+        import atexit
+        atexit.register(lambda: _ENGINE.quit())
+
+    def _worker(fen):
+        # minimal imports inside worker to avoid global import side-effects
+        import chess
+        try:
+            board = chess.Board(fen)
+            info = _ENGINE.analyse(board, chess.engine.Limit(depth=_DEPTH))
+            sc = info.get("score")
+            if sc is None:
+                return 0
+            # unify mate/cp
+            try:
+                val = sc.white().score(mate_score=100000)
+                return 0 if val is None else val
+            except Exception:
+                return 0
+        except Exception:
+            return 0
+
+    # map unique fens to scores
+    with Pool(processes=procs,
+              initializer=_init_worker,
+              initargs=(engine_path, threads, hash_mb, depth)) as P:
+        out = P.map(_worker, unique)
+
+    # reconstruct original order
+    return [out[i] for i in idxs]
+
+
+# tiny convenience: extract FENs from PGN positions (first-node FENs or per-move FENs)
+def pgn_extract_fens(pgn_text_or_game, per_move=True):
+    """
+    Return list of FENs (per-move if per_move else start FEN of game).
+    Non-invasive: uses chess.pgn only when called.
+    """
+    import chess.pgn
+    g = chess.pgn.read_game(StringIO(pgn_text_or_game)) if isinstance(
+        pgn_text_or_game, str) else pgn_text_or_game
+    if not g:
+        return []
+    if not per_move:
+        return [g.board().fen()]
+    b = g.board()
+    fens = []
+    for mv in g.mainline_moves():
+        b.push(mv)
+        fens.append(b.fen())
+    return fens
+
+
+# NOTES (keep short):
+# - call fast_eval_fens with a deduped list of FENs (use pgn_extract_fens to get them).
+# - prefer lower depth (10-14) + more threads per engine + multiple processes.
+# - set procs ~= CPU cores/threads/2, keep Threads in engine >1 for multi-core Stockfish builds.
+# - use hash_mb to give engine more cache.
+# - caching (cache=True) dedups identical FENs before expensive eval.
+# - this file leaves your original imports & hooks untouched; call helpers explicitly.

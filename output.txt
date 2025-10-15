@@ -4,132 +4,76 @@ Hello!
 Loading cache...
   ✓ loaded 671 positions from position_cache.pkl.gz
 Fetching games...
-  5 user, 10 random
+  997 user, 4999 random
 
 Analyzing all games (single pass)...
   1/1 games
-Analyzing: 6.7% (1/15) - 5.01 games/sec, 80.13 pos/sec  1/1 games
-Analyzing: 13.3% (2/15) - 4.80 games/sec, 177.60 pos/sec  1/1 games
-Analyzing: 20.0% (3/15) - 4.72 games/sec, 125.97 pos/sec  1/1 games
-Analyzing: 26.7% (4/15) - 4.62 games/sec, 109.66 pos/sec  1/1 games
-Analyzing: 33.3% (5/15) - 4.62 games/sec, 147.90 pos/sec  1/1 games
-Analyzing: 40.0% (6/15) - 4.68 games/sec, 152.79 pos/sec  1/1 games
-Analyzing: 46.7% (7/15) - 4.70 games/sec, 175.23 pos/sec  1/1 games
-Analyzing: 53.3% (8/15) - 4.65 games/sec, 227.84 pos/sec  1/1 games
-Analyzing: 60.0% (9/15) - 4.50 games/sec, 211.59 pos/sec  1/1 games
-Analyzing: 66.7% (10/15) - 4.46 games/sec, 234.57 pos/sec  1/1 games
-Analyzing: 73.3% (11/15) - 4.37 games/sec, 214.12 pos/sec  1/1 games
-Analyzing: 80.0% (12/15) - 4.33 games/sec, 201.57 pos/sec  1/1 games
-Analyzing: 86.7% (13/15) - 4.34 games/sec, 200.18 pos/sec  1/1 games
-Analyzing: 93.3% (14/15) - 4.37 games/sec, 195.78 pos/sec  1/1 games
-Analyzing: 100.0% (15/15) - 4.40 games/sec, 207.06 pos/sec
-Computing stats...
-
-  5 valid user, 10 valid random
-
-
-Metric         Me    Bott     Mid     Top
-=========================================
-n (count)       5       1       7       1
-ACPL         83.1   105.9    80.8   154.0
-Sharp        85.8   108.2    84.6   156.6
-Closed       13.4    11.8    10.1    10.4
------------------------------------------
-P ACPL       91.1    92.0   101.3   113.7
-N ACPL       97.3   100.4    77.3   232.0
-B ACPL       53.5    77.2    60.5    78.2
-R ACPL       28.1   257.8    99.6   151.4
-Q ACPL       82.9     9.0    94.5   177.7
-K ACPL      155.7    20.0    27.9   202.6
------------------------------------------
-P %          32.5    48.8    33.7    28.1
-N %          18.2    12.2    12.5    12.5
-B %          19.5    12.2    12.0    14.1
-R %           9.1    14.6    13.0     7.8
-Q %          13.0     7.3    13.2    23.4
-K %           7.8     4.9    15.7    14.1
------------------------------------------
-Resign%     100.0   100.0   100.0     0.0
-Best%        24.4    40.5    38.7    29.2
------------------------------------------
-OO-WR        0.0     0.0     0.0     0.0
-OOO-WR       0.0     0.0     0.0     0.0
-C <=4        0.0     0.0     0.0     0.0
-C 5-6        0.0     0.0     0.0     0.0
-C 7-8        0.0     0.0     0.0     0.0
-C 9-10     100.0     0.0     0.0     0.0
-C 11-12      0.0     0.0     0.0     0.0
-C 13-15      0.0     0.0     0.0     0.0
-C >15      100.0     0.0    66.7     0.0
------------------------------------------
-
-Me Game# per Day:
-   1 	A: 83.1 	W: 80.0% 	n=  5
-
-Me Time of Day:
-  00h 	A:  0.0 	W:  0.0% 	n=  0
-  01h 	A: 98.1 	W: 66.7% 	n=  3
-  02h 	A:114.9 	W:100.0% 	n=  1
-  03h 	A:  0.0 	W:  0.0% 	n=  0
-  04h 	A:  0.0 	W:  0.0% 	n=  0
-  05h 	A:  0.0 	W:  0.0% 	n=  0
-  06h 	A:  0.0 	W:  0.0% 	n=  0
-  07h 	A:  0.0 	W:  0.0% 	n=  0
-  08h 	A:  0.0 	W:  0.0% 	n=  0
-  09h 	A:  0.0 	W:  0.0% 	n=  0
-  10h 	A:  0.0 	W:  0.0% 	n=  0
-  11h 	A:  0.0 	W:  0.0% 	n=  0
-  12h 	A:  0.0 	W:  0.0% 	n=  0
-  13h 	A:  0.0 	W:  0.0% 	n=  0
-  14h 	A:  0.0 	W:  0.0% 	n=  0
-  15h 	A: 58.4 	W:100.0% 	n=  1
-  16h 	A:  0.0 	W:  0.0% 	n=  0
-  17h 	A:  0.0 	W:  0.0% 	n=  0
-  18h 	A:  0.0 	W:  0.0% 	n=  0
-  19h 	A:  0.0 	W:  0.0% 	n=  0
-  20h 	A:  0.0 	W:  0.0% 	n=  0
-  21h 	A:  0.0 	W:  0.0% 	n=  0
-  22h 	A:  0.0 	W:  0.0% 	n=  0
-  23h 	A:  0.0 	W:  0.0% 	n=  0
-  ✓ saved 671 positions to position_cache.pkl.gz
-
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
--
+Analyzing: 0.0% (1/5996) - 2.14 games/sec, 34.17 pos/sec  1/1 games
+Analyzing: 0.0% (2/5996) - 1.94 games/sec, 71.83 pos/sec  1/1 games
+Analyzing: 0.1% (3/5996) - 1.89 games/sec, 50.35 pos/sec  1/1 games
+Analyzing: 0.1% (4/5996) - 1.95 games/sec, 46.33 pos/sec  1/1 games
+Analyzing: 0.1% (5/5996) - 1.96 games/sec, 62.82 pos/sec  1/1 games
+Analyzing: 0.1% (6/5996) - 1.72 games/sec, 53.04 pos/sec  1/1 games
+Analyzing: 0.1% (7/5996) - 1.63 games/sec, 46.51 pos/sec  1/1 games
+Analyzing: 0.1% (8/5996) - 1.56 games/sec, 42.28 pos/sec  1/1 games
+Analyzing: 0.2% (9/5996) - 1.45 games/sec, 38.88 pos/sec  1/1 games
+Analyzing: 0.2% (10/5996) - 0.99 games/sec, 27.94 pos/sec  1/1 games
+Analyzing: 0.2% (11/5996) - 1.02 games/sec, 27.02 pos/sec  1/1 games
+Analyzing: 0.2% (12/5996) - 1.04 games/sec, 26.10 pos/sec  1/1 games
+Analyzing: 0.2% (13/5996) - 1.05 games/sec, 26.98 pos/sec  1/1 games
+Analyzing: 0.2% (14/5996) - 0.97 games/sec, 29.62 pos/sec  1/1 games
+Analyzing: 0.3% (15/5996) - 0.97 games/sec, 29.12 pos/sec  1/1 games
+Analyzing: 0.3% (16/5996) - 0.99 games/sec, 28.41 pos/sec  1/1 games
+Analyzing: 0.3% (17/5996) - 0.90 games/sec, 31.32 pos/sec  1/1 games
+Analyzing: 0.3% (18/5996) - 0.89 games/sec, 31.90 pos/sec  1/1 games
+Analyzing: 0.3% (19/5996) - 0.90 games/sec, 31.27 pos/sec  1/1 games
+Analyzing: 0.3% (20/5996) - 0.89 games/sec, 33.25 pos/sec  1/1 games
+Analyzing: 0.4% (21/5996) - 0.90 games/sec, 33.86 pos/sec  1/1 games
+Analyzing: 0.4% (22/5996) - 0.88 games/sec, 34.36 pos/sec  1/1 games
+Analyzing: 0.4% (23/5996) - 0.85 games/sec, 36.19 pos/sec  1/1 games
+Analyzing: 0.4% (24/5996) - 0.85 games/sec, 35.72 pos/sec  1/1 games
+Analyzing: 0.4% (25/5996) - 0.86 games/sec, 35.64 pos/sec  1/1 games
+Analyzing: 0.4% (26/5996) - 0.86 games/sec, 35.11 pos/sec  1/1 games
+Analyzing: 0.5% (27/5996) - 0.88 games/sec, 34.71 pos/sec  1/1 games
+Analyzing: 0.5% (28/5996) - 0.86 games/sec, 35.05 pos/sec  1/1 games
+Analyzing: 0.5% (29/5996) - 0.87 games/sec, 34.66 pos/sec  1/1 games
+Analyzing: 0.5% (30/5996) - 0.86 games/sec, 34.22 pos/sec  1/1 games
+Analyzing: 0.5% (31/5996) - 0.87 games/sec, 33.88 pos/sec  1/1 games
+Analyzing: 0.5% (32/5996) - 0.88 games/sec, 33.68 pos/sec  1/1 games
+Analyzing: 0.6% (33/5996) - 0.88 games/sec, 33.38 pos/sec  1/1 games
+Analyzing: 0.6% (34/5996) - 0.88 games/sec, 33.28 pos/sec  1/1 games
+Analyzing: 0.6% (35/5996) - 0.87 games/sec, 33.83 pos/sec  1/1 games
+Analyzing: 0.6% (36/5996) - 0.83 games/sec, 34.51 pos/sec  1/1 games
+Analyzing: 0.6% (37/5996) - 0.84 games/sec, 34.86 pos/sec  1/1 games
+Analyzing: 0.6% (38/5996) - 0.84 games/sec, 34.90 pos/sec  1/1 games
+Analyzing: 0.7% (39/5996) - 0.81 games/sec, 34.61 pos/sec  1/1 games
+Analyzing: 0.7% (40/5996) - 0.80 games/sec, 34.28 pos/sec  1/1 games
+Analyzing: 0.7% (41/5996) - 0.81 games/sec, 34.62 pos/sec  1/1 games
+Analyzing: 0.7% (42/5996) - 0.81 games/sec, 35.57 pos/sec  1/1 games
+Analyzing: 0.7% (43/5996) - 0.82 games/sec, 36.02 pos/sec  1/1 games
+Analyzing: 0.7% (44/5996) - 0.82 games/sec, 36.78 pos/sec  1/1 games
+Analyzing: 0.8% (45/5996) - 0.81 games/sec, 36.48 pos/sec  1/1 games
+Analyzing: 0.8% (46/5996) - 0.80 games/sec, 36.48 pos/sec  1/1 games
+Analyzing: 0.8% (47/5996) - 0.81 games/sec, 36.98 pos/sec  1/1 games
+Analyzing: 0.8% (48/5996) - 0.82 games/sec, 36.98 pos/sec  1/1 games
+Analyzing: 0.8% (49/5996) - 0.83 games/sec, 36.74 pos/sec  1/1 games
+Analyzing: 0.8% (50/5996) - 0.83 games/sec, 37.10 pos/sec  1/1 games
+Analyzing: 0.9% (51/5996) - 0.83 games/sec, 37.34 pos/sec  1/1 games
+Analyzing: 0.9% (52/5996) - 0.83 games/sec, 37.66 pos/sec  1/1 games
+Analyzing: 0.9% (53/5996) - 0.83 games/sec, 38.31 pos/sec  1/1 games
+Analyzing: 0.9% (54/5996) - 0.84 games/sec, 38.97 pos/sec  1/1 games
+Analyzing: 0.9% (55/5996) - 0.84 games/sec, 39.67 pos/sec  1/1 games
+Analyzing: 0.9% (56/5996) - 0.85 games/sec, 40.49 pos/sec  1/1 games
+Analyzing: 1.0% (57/5996) - 0.84 games/sec, 41.63 pos/sec  1/1 games
+Analyzing: 1.0% (58/5996) - 0.84 games/sec, 41.91 pos/sec  1/1 games
+Analyzing: 1.0% (59/5996) - 0.84 games/sec, 41.88 pos/sec  1/1 games
+Analyzing: 1.0% (60/5996) - 0.84 games/sec, 42.10 pos/sec  1/1 games
+Analyzing: 1.0% (61/5996) - 0.85 games/sec, 42.29 pos/sec  1/1 games
+Analyzing: 1.0% (62/5996) - 0.86 games/sec, 42.23 pos/sec  1/1 games
+Analyzing: 1.1% (63/5996) - 0.87 games/sec, 42.16 pos/sec  1/1 games
+Analyzing: 1.1% (64/5996) - 0.87 games/sec, 42.07 pos/sec  1/1 games
+Analyzing: 1.1% (65/5996) - 0.87 games/sec, 42.43 pos/sec  1/1 games
+Analyzing: 1.1% (66/5996) - 0.86 games/sec, 42.56 pos/sec  1/1 games
+Analyzing: 1.1% (67/5996) - 0.87 games/sec, 42.28 pos/sec  1/1 games
+Analyzing: 1.1% (68/5996) - 0.88 games/sec, 42.05 pos/sec  1/1 games
+Analyzing: 1.2% (69/5996) - 0.88 games/sec, 42.00 pos/sec  1/1 games
