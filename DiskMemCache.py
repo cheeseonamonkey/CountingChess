@@ -8,11 +8,11 @@ class DiskMemCache:
 
     def __init__(self,
                  cache_file="position_cache.pkl.gz",
-                 prune_threshold=5.0,
+                 prune_threshold=6.0,
                  check_interval=19999,
                  max_cache_size=100_000,
                  periodic_save=True,
-                 key_cache_size=50_000):
+                 key_cache_size=8_000):
         self.cache_file = Path(cache_file)
         self.cache, self.freq = {}, defaultdict(int)
         self.hits = self.misses = self.lookup_count = 0
