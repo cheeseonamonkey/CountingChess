@@ -104,7 +104,7 @@ class DiskMemCache:
 
         for k in self.cache.keys():
             self.freq.setdefault(k, 1)
-        print(f"Loaded {len(self.cache)} positions from cache.")
+        print(f"Loaded {len(self.cache)} positions from cache.\n")
 
     def save(self):
         if not self.cache:
