@@ -84,13 +84,6 @@ def _fetch_country_players(country_code, verbose=False):
 def fetch_random_users_spider(seed_user, n, m=50, o=3, verbose=False):
     """
     BFS spider from seed_user to collect n unique users via opponents in games.
-
-    Args:
-        seed_user (str): Starting username.
-        n (int): Target unique users to collect.
-        m (int): Max games per user to fetch.
-        o (int): Max new opponents per user to queue.
-        verbose (bool): Print progress.
     """
     h = hashlib.md5(f"{seed_user}_{n}_{m}_{o}".encode()).hexdigest()
     cache_key = f"spider_users_{h}"
@@ -100,27 +93,24 @@ def fetch_random_users_spider(seed_user, n, m=50, o=3, verbose=False):
     if not _get_user_country(seed_user):
         if verbose: print(f"✗ seed user not found: {seed_user}")
         return []
-    users = set([seed_user])
+    users = {seed_user}
     queue = deque([seed_user])
     while len(users) < n and queue:
         current = queue.popleft()
         if verbose: print(f"→ crawling {current} ({len(users)}/{n})")
         games = fetch_all_users_games([current], m, verbose)
-        opponents = set()
-        for game in games:
-            white = game.headers.get("White")
-            black = game.headers.get("Black")
-            if white == current:
-                opp = black
-            elif black == current:
-                opp = white
-            else:
-                continue
-            if opp and opp != current:
-                opponents.add(opp)
-        new_opps = [opp for opp in list(opponents)[:o] if opp not in users]
+        opponents = {opp for game in games
+                     for opp in (game.headers.get("White"), game.headers.get("Black"))
+                     if opp and opp != current}
+        candidates = opponents - users
+        if not candidates: continue
+        new_opps = random.sample(list(candidates), min(o, len(candidates)))
         users.update(new_opps)
         queue.extend(new_opps)
+        shuffled = list(queue)
+        random.shuffle(shuffled)
+        queue.clear()
+        queue.extend(shuffled)
         if verbose: print(f"  added {len(new_opps)} new users")
     result = list(users)[:n]
     _cache(cache_key, result)

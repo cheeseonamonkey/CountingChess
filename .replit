@@ -49,3 +49,12 @@ author = 2911550
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "nohup sh -c 'python main.py 2>&1 | tee output.txt' &"
+
+[[workflows.workflow]]
+name = "Static Runner "
+mode = "sequential"
+author = 2911550
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python static.py"
