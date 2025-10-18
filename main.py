@@ -16,8 +16,8 @@ def main():
 
     print("Fetching games...")
     user_games = Fetchers.fetch_all_users_games([user], None)[:20]
-    random_games = Fetchers.fetch_random_games(30, 5, 99)
-    spider_games = Fetchers.spider_games(user, 150, 1000, 99)
+    random_games = Fetchers.fetch_random_games(4999, 5, 99)
+    spider_games = Fetchers.spider_games(user, , 99)
     random_games.extend(spider_games)
     print(f"  {len(user_games)} user, {len(random_games)} random\n")
 

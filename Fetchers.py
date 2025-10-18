@@ -184,17 +184,18 @@ def fetch_random_games(n, m=50, o=3, verbose=False):
     return filtered
 
 
-def spider_games(seed_user, n_users, n_games=None, m=20, o=10, verbose=False):
+def spider_games(seed_user, n_games, m=20, o=10, verbose=False):
     """
     Args:
         seed_user: Starting username
-        n_users: Target users to discover
-        n_games: Max games to return
+        n_games: Target number of games to fetch
         m: Games per user in spider
         o: Opponents sampled per iteration
         verbose: Print progress
     """
-    users = spider_users(seed_user, n_users, m, o, verbose)
+    # Estimate users needed (rough heuristic: m games per user)
+    estimated_users = max(5, (n_games // m) + 2)
+    users = spider_users(seed_user, estimated_users, m, o, verbose)
     return fetch_all_users_games(users, n_games, verbose)
 
 
