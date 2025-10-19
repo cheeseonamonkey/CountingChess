@@ -1,0 +1,95 @@
+import chess
+import Fetchers, CalcHelpers, Stockfish
+from CalcHelpers import print_stats
+import time
+
+
+def main():
+    print("Hello!\n")
+    sf_path = "./stockfish/stockfish-ubuntu-x86-64-avx2"
+    depth = 10
+    user = "ffffattyyyy"
+    CalcHelpers.user = user
+
+    print("\nLoading cache...")
+    Stockfish.load_cache()
+
+    print("Fetching games...")
+    user_games = Fetchers.fetch_all_users_games([user], None)[:20]
+    random_games = Fetchers.fetch_random_games(4999, 5, 99)
+    spider_games = Fetchers.spider_games(user, , 99)
+    random_games.extend(spider_games)
+    print(f"  {len(user_games)} user, {len(random_games)} random\n")
+
+    # Analyze every game once
+    all_games = list(user_games) + list(random_games)
+    print("Analyzing all games (single pass)...")
+    all_results = []
+    start_time = time.time()
+    total_positions = 0
+    for i, game in enumerate(all_games):
+        result = Stockfish.analyze_games([game], sf_path, depth, [user],
+                                         True)[0]
+        all_results.append(result)
+        if result:
+            total_positions += len(result[0])
+        elapsed = time.time() - start_time
+        progress = (i + 1) / len(all_games) * 100
+        games_per_sec = (i + 1) / elapsed if elapsed > 0 else 0
+        positions_per_sec = total_positions / elapsed if elapsed > 0 else 0
+        print(
+            f"Analyzing: {progress:.1f}% ({i+1}/{len(all_games)}):    \n   {games_per_sec:.2f} games/sec, \n   {positions_per_sec:.2f} pos/sec",
+            end='\r')
+    print()
+
+    # Split results
+    ulen = len(user_games)
+    user_results, random_results = all_results[:ulen], all_results[ulen:]
+
+    print("Computing stats...\n")
+
+    # Filter valid results
+    def filter_valid(games, results):
+        valid = [(g, r) for g, r in zip(games, results) if r is not None]
+        return zip(*valid) if valid else ([], [])
+
+    user_games, user_results = filter_valid(user_games, user_results)
+    random_games, random_results = filter_valid(random_games, random_results)
+
+    print(
+        f"  {len(user_results)} valid user, {len(random_results)} valid random\n"
+    )
+
+    # Sort and split random games by ELO
+    sorted_pairs = sorted(zip(random_games, random_results),
+                          key=lambda x: (x[1][4] or 0) if x[1] else 0)
+    n = len(sorted_pairs)
+    bott_games, bott_results = zip(*sorted_pairs[:int(n *
+                                                      0.19)]) if n else ([],
+                                                                         [])
+    mid_games, mid_results = zip(
+        *sorted_pairs[int(n * 0.2):int(n * 0.9)]) if n else ([], [])
+    top_games, top_results = zip(*sorted_pairs[int(n * 0.91):]) if n else ([],
+                                                                           [])
+
+    print_stats(["Me", "Bott", "Mid", "Top"], [
+        user_results,
+        list(bott_results),
+        list(mid_results),
+        list(top_results)
+    ], [user_games,
+        list(bott_games),
+        list(mid_games),
+        list(top_games)], [
+            user_results,
+            list(bott_results),
+            list(mid_results),
+            list(top_results)
+        ])
+
+    Stockfish.save_cache()
+
+
+if __name__ == "__main__":
+    main()
+    print("\n-" * 40)
